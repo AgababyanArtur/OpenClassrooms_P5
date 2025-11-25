@@ -1,105 +1,75 @@
+name: CI/CD Pipeline
+
 on:
-    push:
-        branches: ["main"]
-    pull_request:
-        branches: ["main"]
-    
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
 jobs:
-    install:
-        name: Istall and Cache Dependencies
-        runs-on: ubuntu-latest
-        steps:
-            - name: Check out the repository
-              uses: actions/checkout@v4
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
 
-            - name: Set up Python 3.13.5
-              uses: actions/setup-python@v5
-              with:
-                python-version: "3.13.5"
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
 
-            - name: Cache pip dependencies
-              uses: actions/cache@v4
-              with:
-                path: ~/.cache/pip
-                key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
-                restore-keys: |
-                    ${{runner.os}}-pip-
-            
-            - name: Install dependencies
-              run: pip install -r requirements.txt
-    
-    test:
-        name: Run test
-        needs: install
-        runs-on: ubuntu-latest
-        steps:
-            - name: Check out the repository
-              uses: actions/checkout@v4
-            
-            - name: Set up Python 3.13.5
-              uses: actions/setup-python@v5
-              with:
-                python-version: "3.13.5"
-            
-            - name: Load cached pip dependencies
-              uses: actions/cache@v4
-              with:
-                path: ~/.cache/pip
-                key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
-                restire-keys: |
-                    ${{runner.os}}
-                 
-            - name: install dependencies
-              run: pip install -r requirements.txt
-            
-            - name: Run test with pytest
-              run: pytest tests/
-            
-    lint-and-format:
-        name: Lint & Format Code
-        needs: install
-        runs-on: ubuntu-latest
-        steps:
-            - name: Check out repository
-              uses: actions.checkout@v4
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
+          restore-keys: |
+            ${{runner.os}}-pip-
 
-            - name: Set up Python 3.13.5
-              uses: setup-python@v5
-              with:
-                python-version: "3.13.5"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-            - name: Install linting tools
-              run: pip install ruff black
+      - name: Run test with pytest
+        run: pytest tests/
 
-            - name: Check formatting with Black
-              run: black --check
+  lint-and-format:
+    name: Lint & Format Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-            - name: Lint With Ruff
-              run: ruff check
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
 
-    build-and-push-docker:
-        name: Build & Push Docker Image
-        needs: [test, lint-and-format]
-        runs-on: ubuntu-latest
-        if: github.ref == 'refs/heads/main'
-        permissions:
-            contents: read
-            packages: write
+      - name: Install linting tools
+        run: pip install ruff black
 
-        steps:
-            - name: Check out repository
-              uses: actions.checkout@v4
-            
-            - name: Log in to Github Container Registary
-              uses: docker/login-action@v3
-              with:
-                registry: ghcr.io
-                username: ${{github.repository_owner}}
-                passeword: ${{secrets.GITHUB_TOKEN}}
-            
-            - name: Build and Push Docker Image
-              uses: docker/build-push-action@v5
-              with:
-                context: .
-                push: true
-                tags: ghcr.io/${{github.repositoru_owner}}/${{github.event.repository.name}}:${{github.sha}}
+      - name: Check formatting with Black
+        run: black --check .
+
+      - name: Lint With Ruff
+        run: ruff check .
+
+  deploy-to-huggingface:
+    name: Push to Hugging Face Hub
+    needs: [test, lint-and-format]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to Hub
+        env:
+          HF_TOKEN: ${{secrets.HF_TOKEN}}
+          HF_USERNAME: "ArturAgababyanML"
+          HF_SPACE_NAME: "projt5"
+        run: |
+          git push https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME main:main --force
