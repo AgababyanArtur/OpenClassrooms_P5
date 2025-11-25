@@ -14,21 +14,24 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v4
 
+      # On installe uv. L'option enable-cache active le cache automatiquement !
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-suffix: "python-3.13"
+
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{runner.os}}-pip-${{hashFiles('**/requirements.txt')}}
-          restore-keys: |
-            ${{runner.os}}-pip-
-
+      # Installation des dépendances du projet depuis pyproject.toml
+      # L'option --system installe dans l'environnement Python configuré juste avant
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          uv pip install --system .
+          uv pip install --system pytest  # On s'assure que pytest est là
 
       - name: Run test with pytest
         run: pytest tests/
@@ -40,13 +43,20 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-suffix: "python-3.13"
+
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
+      # Installation rapide des outils de linting via uv
       - name: Install linting tools
-        run: pip install ruff black
+        run: uv pip install --system ruff black
 
       - name: Check formatting with Black
         run: black --check .
@@ -68,8 +78,10 @@ jobs:
 
       - name: Push to Hub
         env:
-          HF_TOKEN: ${{secrets.HF_TOKEN}}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_USERNAME: "ArturAgababyanML"
           HF_SPACE_NAME: "projt5"
         run: |
+          git config --global user.email "bot@github.com"
+          git config --global user.name "GitHub Actions"
           git push https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME main:main --force
