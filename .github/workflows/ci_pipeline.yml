@@ -1,0 +1,38 @@
+# Étapes du travail
+steps:
+    # 1. CLONAGE DU CODE : Récupérer les fichiers du dépôt
+    - name: Checkout code
+    uses: actions/checkout@v4
+    
+    # 2. CONFIGURATION DE PYTHON : Utiliser la bonne version
+    - name: Set up Python 3.13.5
+    uses: actions/setup-python@v5
+    with:
+        python-version: '3.13.5'
+        
+    # 3. INSTALLATION DE UV : Préparer le gestionnaire de paquets
+    - name: Install uv
+    run: pip install uv
+    
+    # 4. INSTALLATION DES DÉPENDANCES : Créer l'environnement virtuel et installer
+    - name: Install dependencies (uv)
+    
+    # uv crée l'environnement virtuel, puis installe les dépendances du pyproject.toml
+    # Note: On utilise --dev pour inclure pytest et les outils de développement
+    run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install -e . --dev
+    
+    # 5. EXÉCUTION DES TESTS : Lancer pytest (le cœur de la CI)
+    - name: Run Pytest Tests
+    # On active l'environnement pour que la commande pytest soit trouvée
+    run: |
+        source .venv/bin/activate
+        pytest
+    
+    # 6. Vérification du format (Exemple de linter pour la qualité de code, à ajouter plus tard)
+    - name: Run Linter (Black)
+    run: |
+        source .venv/bin/activate
+        black --check .
