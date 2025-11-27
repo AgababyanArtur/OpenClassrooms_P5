@@ -1,84 +1,87 @@
 import uvicorn
 import pandas as pd
 import joblib
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+import datetime
+
+# Imports de ta base de données
+from database import SessionLocal, engine, PredictionLog
 
 # ==========================================
-# 1. Configuration et Chargement du Modèle
+# 1. Configuration et Chargement
 # ==========================================
 
 app = FastAPI(
     title="API de Prédiction - Projet 5",
-    description="API pour prédire le score/churn (adaptée aux 10 features du modèle).",
+    description="API avec traçabilité dans PostgreSQL.",
     version="1.0.0"
 )
 
-# ⚠️ Vérifie bien que ton fichier s'appelle exactement comme ça et est dans un dossier 'model'
 MODEL_PATH = "model/mon_modele.joblib"
 
 try:
     model = joblib.load(MODEL_PATH)
     print(f"✅ Modèle chargé avec succès depuis {MODEL_PATH}")
 except Exception as e:
-    print(f"❌ ERREUR CRITIQUE : Impossible de charger le modèle : {e}")
-    # On ne stoppe pas l'app ici pour permettre le debug, mais le predict ne marchera pas
+    print(f"❌ ERREUR : Impossible de charger le modèle : {e}")
     model = None
+
+# Dépendance pour récupérer une session de base de données à chaque requête
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # ==========================================
 # 2. Définition du Schéma de Données
 # ==========================================
 
 class InputData(BaseModel):
-    """
-    Définit les données d'entrée. 
-    Les types (float/int) doivent correspondre à ton X_test.
-    """
     ratio_surcharge_anciennete: float
     nombre_participation_pee: int
-    departement_consulting: float    # Correspond à 'departement_Consulting'
+    departement_consulting: float
     age: int
-    poste_consultant: float          # Correspond à 'poste_Consultant'
+    poste_consultant: float
     tension_salaire: float
-    statut_marital_marie: float      # Correspond à 'statut_marital_Marié(e)'
+    statut_marital_marie: float
     annees_dans_l_entreprise: int
     satisfaction_globale_moyenne: float
     satisfaction_employee_nature_travail: int
 
 # ==========================================
-# 3. Définition des Endpoints
+# 3. Endpoints
 # ==========================================
 
 @app.get("/")
 def home():
-    return {"message": "API fonctionnelle ! Va sur /docs pour tester la prédiction."}
+    return {"message": "API connectée à PostgreSQL !"}
 
 @app.post("/predict")
-def predict(data: InputData):
+def predict(data: InputData, db: Session = Depends(get_db)):
+    """
+    Reçoit les données, fait une prédiction, et SAUVEGARDE tout dans la BDD.
+    """
     if model is None:
-        raise HTTPException(status_code=500, detail="Modèle non chargé côté serveur.")
+        raise HTTPException(status_code=500, detail="Modèle non chargé.")
 
     try:
-        # 1. Récupération des données envoyées par l'utilisateur
+        # 1. Préparation des données pour le modèle
         input_data = data.model_dump()
-
-        # 2. Création du DataFrame
         df = pd.DataFrame([input_data])
 
-        # 3. 🚨 ÉTAPE CRUCIALE : RENOMMAGE DES COLONNES
-        # Pydantic utilise des noms simples (minuscules, sans parenthèses),
-        # mais ton modèle veut les noms EXACTS de l'entraînement.
+        # Renommage pour coller au modèle
         rename_dict = {
             "departement_consulting": "departement_Consulting",
             "poste_consultant": "poste_Consultant",
             "statut_marital_marie": "statut_marital_Marié(e)"
-            # Les autres colonnes ont déjà le bon nom, donc pas besoin de les toucher
         }
         df = df.rename(columns=rename_dict)
-
-        # 4. Vérification de l'ordre des colonnes (Optionnel mais recommandé)
-        # Certains modèles (comme XGBoost sans feature names) sont sensibles à l'ordre.
-        # On force l'ordre pour être sûr.
+        
+        # Réorganisation des colonnes
         expected_columns = [
             "ratio_surcharge_anciennete", "nombre_participation_pee", 
             "departement_Consulting", "age", "poste_Consultant", 
@@ -86,32 +89,39 @@ def predict(data: InputData):
             "annees_dans_l_entreprise", "satisfaction_globale_moyenne", 
             "satisfaction_employee_nature_travail"
         ]
-        
-        # On réorganise les colonnes pour matcher exactement X_test_subset
         df = df[expected_columns]
 
-        # 5. Prédiction
-        prediction = model.predict(df)
-        
-        # Gestion des probabilités (si le modèle le permet)
-        probability = None
+        # 2. Prédiction
+        prediction_val = int(model.predict(df)[0])
+        proba_val = None
         if hasattr(model, "predict_proba"):
-            # On prend souvent la probabilité de la classe 1 (positif/churn)
-            probability = model.predict_proba(df)[0][1]
+            proba_val = float(model.predict_proba(df)[0][1])
 
-        # 6. Réponse
+        # 3. 💾 ENREGISTREMENT DANS LA BASE DE DONNÉES (LOGGING)
+        # On stocke les inputs bruts au format JSON pour la traçabilité
+        log_entry = PredictionLog(
+            timestamp=datetime.datetime.now(),
+            inputs=input_data,  # SQLAlchemy convertira auto le dict en JSON
+            prediction=prediction_val,
+            probability=proba_val
+        )
+        
+        db.add(log_entry)
+        db.commit() # On valide l'enregistrement
+        db.refresh(log_entry) # On récupère l'ID généré
+
+        print(f"📝 Log enregistré en BDD avec l'ID : {log_entry.id}")
+
+        # 4. Retour de la réponse
         return {
-            "prediction": int(prediction[0]), # Convertit numpy.int64 en int Python standard
-            "probability": probability
+            "prediction": prediction_val,
+            "probability": proba_val,
+            "log_id": log_entry.id # On renvoie l'ID du log pour preuve
         }
 
     except Exception as e:
-        # Affiche l'erreur dans la console serveur pour t'aider à débugger
-        print(f"Erreur lors de la prédiction : {e}")
+        print(f"Erreur : {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
-# ==========================================
-# 4. Lancement
-# ==========================================
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
