@@ -25,4 +25,5 @@ model/mon_modele.joblib
 
 # On ignore les données brutes (confidentialité + poids)
 *.csv
-*.xlsx
+*.xlsxhtmlcov/
+.coverage

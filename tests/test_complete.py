@@ -127,3 +127,33 @@ def test_prediction_workflow_loyal():
 
     response = client.post("/predict", json=payload)
     assert response.status_code == 200
+
+from unittest.mock import patch
+
+def test_prediction_error_handling():
+    """
+    Test Unitaire : Vérifie que l'API gère bien les erreurs internes (500/400).
+    On simule (mock) une panne du modèle pour voir si l'API survit.
+    """
+    # Données valides
+    payload = {
+        "ratio_surcharge_anciennete": 0.14,
+        "nombre_participation_pee": 0,
+        "departement_consulting": 0.0,
+        "age": 41,
+        "poste_consultant": 0.0,
+        "tension_salaire": 0.0003,
+        "statut_marital_marie": 0.0,
+        "annees_dans_l_entreprise": 0,
+        "satisfaction_globale_moyenne": 2.0,
+        "satisfaction_employee_nature_travail": 0
+    }
+
+    # On "truque" la méthode predict du modèle pour qu'elle lève une erreur
+    with patch("app.model.predict", side_effect=Exception("Boom! Modèle cassé")):
+        response = client.post("/predict", json=payload)
+        
+    # On s'attend à ce que l'API attrape l'erreur et renvoie 400 (selon ton code app.py)
+    # Note : Dans ton app.py, le 'except' renvoie 400.
+    assert response.status_code == 400
+    assert "Boom! Modèle cassé" in response.json()["detail"]
