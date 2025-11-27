@@ -8,45 +8,42 @@ from pydantic import BaseModel
 # 1. Configuration et Chargement du Modèle
 # ==========================================
 
-# Initialisation de l'application FastAPI
 app = FastAPI(
-    title="API de Prédiction Projet 5",
-    description="Une API simple pour servir un modèle de Machine Learning.",
+    title="API de Prédiction - Projet 5",
+    description="API pour prédire le score/churn (adaptée aux 10 features du modèle).",
     version="1.0.0"
 )
 
-# Chargement du modèle au démarrage
-# On le charge en variable globale pour ne pas le recharger à chaque requête
-MODEL_PATH = "model/mon_modele.joblib" # Assure-toi que ce chemin est correct
+# ⚠️ Vérifie bien que ton fichier s'appelle exactement comme ça et est dans un dossier 'model'
+MODEL_PATH = "model/mon_modele.joblib"
 
 try:
     model = joblib.load(MODEL_PATH)
-    print(f"✅ Modèle chargé depuis {MODEL_PATH}")
+    print(f"✅ Modèle chargé avec succès depuis {MODEL_PATH}")
 except Exception as e:
-    print(f"❌ Erreur lors du chargement du modèle : {e}")
+    print(f"❌ ERREUR CRITIQUE : Impossible de charger le modèle : {e}")
+    # On ne stoppe pas l'app ici pour permettre le debug, mais le predict ne marchera pas
     model = None
 
 # ==========================================
-# 2. Définition du Schéma de Données (Pydantic)
+# 2. Définition du Schéma de Données
 # ==========================================
 
 class InputData(BaseModel):
     """
-    Définit la structure des données attendues par l'API.
-    Les noms des variables doivent correspondre aux colonnes utilisées lors de l'entraînement.
+    Définit les données d'entrée. 
+    Les types (float/int) doivent correspondre à ton X_test.
     """
-    # --- À MODIFIER CI-DESSOUS SELON TES FEATURES ---
-    feature_1: float  # ex: age
-    feature_2: float  # ex: revenu
-    feature_3: int    # ex: nombre_enfants
-    feature_4: str    # ex: categorie_socio_pro (si ton pipeline gère les strings)
-    
-    # Exemple concret (à effacer et remplacer par tes vraies données) :
-    # sepal_length: float
-    # sepal_width: float
-    # petal_length: float
-    # petal_width: float
-
+    ratio_surcharge_anciennete: float
+    nombre_participation_pee: int
+    departement_consulting: float    # Correspond à 'departement_Consulting'
+    age: int
+    poste_consultant: float          # Correspond à 'poste_Consultant'
+    tension_salaire: float
+    statut_marital_marie: float      # Correspond à 'statut_marital_Marié(e)'
+    annees_dans_l_entreprise: int
+    satisfaction_globale_moyenne: float
+    satisfaction_employee_nature_travail: int
 
 # ==========================================
 # 3. Définition des Endpoints
@@ -54,48 +51,67 @@ class InputData(BaseModel):
 
 @app.get("/")
 def home():
-    """Endpoint de base pour vérifier que l'API tourne."""
-    return {"message": "Bienvenue sur l'API de prédiction ! Utilisez /docs pour tester."}
+    return {"message": "API fonctionnelle ! Va sur /docs pour tester la prédiction."}
 
 @app.post("/predict")
 def predict(data: InputData):
-    """
-    Reçoit les données, les transforme en DataFrame et renvoie la prédiction.
-    """
-    # Vérification que le modèle est bien chargé
     if model is None:
-        raise HTTPException(status_code=500, detail="Le modèle n'est pas disponible.")
+        raise HTTPException(status_code=500, detail="Modèle non chargé côté serveur.")
 
     try:
-        # 1. Conversion des données Pydantic en dictionnaire
+        # 1. Récupération des données envoyées par l'utilisateur
         input_data = data.model_dump()
 
-        # 2. Conversion en DataFrame pandas (format attendu par scikit-learn)
-        # On met les données dans une liste ([input_data]) pour créer une seule ligne
+        # 2. Création du DataFrame
         df = pd.DataFrame([input_data])
 
-        # 3. Prédiction
-        # Si c'est une classification, on peut vouloir la classe ET la probabilité
+        # 3. 🚨 ÉTAPE CRUCIALE : RENOMMAGE DES COLONNES
+        # Pydantic utilise des noms simples (minuscules, sans parenthèses),
+        # mais ton modèle veut les noms EXACTS de l'entraînement.
+        rename_dict = {
+            "departement_consulting": "departement_Consulting",
+            "poste_consultant": "poste_Consultant",
+            "statut_marital_marie": "statut_marital_Marié(e)"
+            # Les autres colonnes ont déjà le bon nom, donc pas besoin de les toucher
+        }
+        df = df.rename(columns=rename_dict)
+
+        # 4. Vérification de l'ordre des colonnes (Optionnel mais recommandé)
+        # Certains modèles (comme XGBoost sans feature names) sont sensibles à l'ordre.
+        # On force l'ordre pour être sûr.
+        expected_columns = [
+            "ratio_surcharge_anciennete", "nombre_participation_pee", 
+            "departement_Consulting", "age", "poste_Consultant", 
+            "tension_salaire", "statut_marital_Marié(e)", 
+            "annees_dans_l_entreprise", "satisfaction_globale_moyenne", 
+            "satisfaction_employee_nature_travail"
+        ]
+        
+        # On réorganise les colonnes pour matcher exactement X_test_subset
+        df = df[expected_columns]
+
+        # 5. Prédiction
         prediction = model.predict(df)
         
-        # Optionnel : Récupérer la probabilité (si le modèle le supporte)
-        # probabilities = model.predict_proba(df).tolist() if hasattr(model, "predict_proba") else None
+        # Gestion des probabilités (si le modèle le permet)
+        probability = None
+        if hasattr(model, "predict_proba"):
+            # On prend souvent la probabilité de la classe 1 (positif/churn)
+            probability = model.predict_proba(df)[0][1]
 
-        # 4. Retour de la réponse en JSON
-        # On utilise .tolist() ou .item() pour convertir les types numpy en types Python standard
+        # 6. Réponse
         return {
-            "prediction": prediction[0].item(), # La classe prédite (0 ou 1, ou nom de classe)
-            # "probability": probabilities # Décommente si tu veux les probas
+            "prediction": int(prediction[0]), # Convertit numpy.int64 en int Python standard
+            "probability": probability
         }
 
     except Exception as e:
-        # En cas d'erreur (ex: format de données incorrect pour le modèle)
+        # Affiche l'erreur dans la console serveur pour t'aider à débugger
+        print(f"Erreur lors de la prédiction : {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
-
 # ==========================================
-# 4. Lancement (Si exécuté directement)
+# 4. Lancement
 # ==========================================
 if __name__ == "__main__":
-    # Permet de lancer le script via "python app.py"
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

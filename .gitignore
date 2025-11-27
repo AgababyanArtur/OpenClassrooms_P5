@@ -1,0 +1,28 @@
+# --- Environnement Virtuel (Les outils loués) ---
+# On ne l'envoie jamais car on peut le recréer avec 'uv sync'
+.venv/
+venv/
+env/
+
+# --- Cache Python (Les "miettes" laissées par Python) ---
+# Ce sont des fichiers compilés inutiles qui se recréent tout seuls
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# --- Configuration de ton éditeur (VS Code, Mac, etc.) ---
+# Ce sont tes réglages perso, pas ceux du projet
+.vscode/
+.idea/
+.DS_Store
+
+# --- Données et Modèles (Le lourd) ---
+# GitHub refuse les fichiers > 100 Mo.
+# Si ton modèle est petit (<100 Mo) et que tu VEUX l'envoyer,
+# mets un # devant la ligne suivante :
+model/mon_modele.joblib
+
+# On ignore les données brutes (confidentialité + poids)
+*.csv
+*.xlsx
