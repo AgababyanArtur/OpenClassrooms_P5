@@ -1,6 +1,5 @@
 # Fichier : tests/test_model_loading.py
 
-import pytest
 
 
 # Simulation de la librairie FastAPI pour l'exemple

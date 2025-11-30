@@ -8,6 +8,8 @@ from sqlalchemy.pool import StaticPool
 from app import app, get_db
 from database import Base, PredictionLog
 
+from unittest.mock import patch
+
 # ==========================================
 # Configuration de la BDD de Test (En mémoire)
 # ==========================================
@@ -136,9 +138,6 @@ def test_prediction_workflow_loyal():
 
     response = client.post("/predict", json=payload)
     assert response.status_code == 200
-
-
-from unittest.mock import patch
 
 
 def test_prediction_error_handling():

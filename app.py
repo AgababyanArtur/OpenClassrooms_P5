@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 import datetime
 
 # Imports de ta base de données
-from database import SessionLocal, engine, PredictionLog
+from database import SessionLocal, PredictionLog
 
 # ==========================================
 # 1. Configuration et Chargement

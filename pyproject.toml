@@ -38,4 +38,20 @@ dev = [
     "httpx>=0.28.1",
     "pytest>=9.0.1",
     "pytest-cov>=7.0.0",
+    "ruff>=0.8.0",   # <-- Indispensable pour que 'uv run ruff' fonctionne
+    "black>=24.0.0", # <-- Indispensable pour que 'uv run black' fonctionne
 ]
+
+[tool.ruff]
+# On exclut les dossiers de cache et virtuels
+exclude = [".venv", ".git", "__pycache__", "build", "dist"]
+
+[tool.ruff.lint]
+# On ignore certaines règles globales si besoin, mais surtout :
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+# Pour les notebooks (*.ipynb), on ignore l'erreur E402 (Imports pas en haut)
+"*.ipynb" = ["E402"]
+# On peut aussi ignorer les lignes trop longues dans les notebooks
+# "*.ipynb" = ["E501"]

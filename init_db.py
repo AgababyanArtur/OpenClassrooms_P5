@@ -1,6 +1,4 @@
 import pandas as pd
-import numpy as np
-from sqlalchemy.orm import Session
 from database import SessionLocal, engine, Base, EmployeeHistory
 
 # ==========================================
