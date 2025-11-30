@@ -26,8 +26,12 @@ dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.uv]
-package = false
+# --- MODIFICATION ICI ---
+# J'ai supprimé [tool.uv] package = false
+# Et j'ai ajouté ceci pour que le build fonctionne :
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
 
 [dependency-groups]
 dev = [
