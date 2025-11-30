@@ -8,10 +8,11 @@ from database import SessionLocal, engine, Base, EmployeeHistory
 # ==========================================
 CSV_PATH = "final_data_set.csv"
 
+
 def init_database():
     # 1. Création des tables
     Base.metadata.create_all(bind=engine)
-    
+
     # 2. Chargement du CSV
     print(f"📂 Lecture du fichier {CSV_PATH}...")
     try:
@@ -32,11 +33,17 @@ def init_database():
 
     # 4. Vérification des colonnes manquantes
     expected_columns = [
-        "ratio_surcharge_anciennete", "nombre_participation_pee", 
-        "departement_consulting", "age", "poste_consultant", 
-        "tension_salaire", "statut_marital_marie", 
-        "annees_dans_l_entreprise", "satisfaction_globale_moyenne", 
-        "satisfaction_employee_nature_travail", "target_churn"
+        "ratio_surcharge_anciennete",
+        "nombre_participation_pee",
+        "departement_consulting",
+        "age",
+        "poste_consultant",
+        "tension_salaire",
+        "statut_marital_marie",
+        "annees_dans_l_entreprise",
+        "satisfaction_globale_moyenne",
+        "satisfaction_employee_nature_travail",
+        "target_churn",
     ]
 
     for col in expected_columns:
@@ -52,9 +59,9 @@ def init_database():
     try:
         # On vide la table avant de remplir (Optionnel)
         session.query(EmployeeHistory).delete()
-        
+
         print("💾 Insertion des données en cours...")
-        
+
         data_to_insert = []
         for _, row in df.iterrows():
             # 🚨 C'est ICI que la magie opère :
@@ -69,20 +76,25 @@ def init_database():
                 statut_marital_marie=float(row["statut_marital_marie"]),
                 annees_dans_l_entreprise=int(row["annees_dans_l_entreprise"]),
                 satisfaction_globale_moyenne=float(row["satisfaction_globale_moyenne"]),
-                satisfaction_employee_nature_travail=int(row["satisfaction_employee_nature_travail"]),
-                target_churn=int(row["target_churn"])
+                satisfaction_employee_nature_travail=int(
+                    row["satisfaction_employee_nature_travail"]
+                ),
+                target_churn=int(row["target_churn"]),
             )
             data_to_insert.append(employee)
 
         session.add_all(data_to_insert)
         session.commit()
-        print(f"✅ Succès ! {len(data_to_insert)} employés ont été insérés dans PostgreSQL.")
-        
+        print(
+            f"✅ Succès ! {len(data_to_insert)} employés ont été insérés dans PostgreSQL."
+        )
+
     except Exception as e:
         session.rollback()
         print(f"❌ Erreur lors de l'insertion : {e}")
     finally:
         session.close()
+
 
 if __name__ == "__main__":
     init_database()

@@ -16,7 +16,7 @@ from database import SessionLocal, engine, PredictionLog
 app = FastAPI(
     title="API de Prédiction - Projet 5",
     description="API avec traçabilité dans PostgreSQL.",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 MODEL_PATH = "model/mon_modele.joblib"
@@ -28,6 +28,7 @@ except Exception as e:
     print(f"❌ ERREUR : Impossible de charger le modèle : {e}")
     model = None
 
+
 # Dépendance pour récupérer une session de base de données à chaque requête
 def get_db():
     db = SessionLocal()
@@ -36,9 +37,11 @@ def get_db():
     finally:
         db.close()
 
+
 # ==========================================
 # 2. Définition du Schéma de Données
 # ==========================================
+
 
 class InputData(BaseModel):
     ratio_surcharge_anciennete: float
@@ -52,13 +55,16 @@ class InputData(BaseModel):
     satisfaction_globale_moyenne: float
     satisfaction_employee_nature_travail: int
 
+
 # ==========================================
 # 3. Endpoints
 # ==========================================
 
+
 @app.get("/")
 def home():
     return {"message": "API connectée à PostgreSQL !"}
+
 
 @app.post("/predict")
 def predict(data: InputData, db: Session = Depends(get_db)):
@@ -77,17 +83,22 @@ def predict(data: InputData, db: Session = Depends(get_db)):
         rename_dict = {
             "departement_consulting": "departement_Consulting",
             "poste_consultant": "poste_Consultant",
-            "statut_marital_marie": "statut_marital_Marié(e)"
+            "statut_marital_marie": "statut_marital_Marié(e)",
         }
         df = df.rename(columns=rename_dict)
-        
+
         # Réorganisation des colonnes
         expected_columns = [
-            "ratio_surcharge_anciennete", "nombre_participation_pee", 
-            "departement_Consulting", "age", "poste_Consultant", 
-            "tension_salaire", "statut_marital_Marié(e)", 
-            "annees_dans_l_entreprise", "satisfaction_globale_moyenne", 
-            "satisfaction_employee_nature_travail"
+            "ratio_surcharge_anciennete",
+            "nombre_participation_pee",
+            "departement_Consulting",
+            "age",
+            "poste_Consultant",
+            "tension_salaire",
+            "statut_marital_Marié(e)",
+            "annees_dans_l_entreprise",
+            "satisfaction_globale_moyenne",
+            "satisfaction_employee_nature_travail",
         ]
         df = df[expected_columns]
 
@@ -103,12 +114,12 @@ def predict(data: InputData, db: Session = Depends(get_db)):
             timestamp=datetime.datetime.now(),
             inputs=input_data,  # SQLAlchemy convertira auto le dict en JSON
             prediction=prediction_val,
-            probability=proba_val
+            probability=proba_val,
         )
-        
+
         db.add(log_entry)
-        db.commit() # On valide l'enregistrement
-        db.refresh(log_entry) # On récupère l'ID généré
+        db.commit()  # On valide l'enregistrement
+        db.refresh(log_entry)  # On récupère l'ID généré
 
         print(f"📝 Log enregistré en BDD avec l'ID : {log_entry.id}")
 
@@ -116,12 +127,13 @@ def predict(data: InputData, db: Session = Depends(get_db)):
         return {
             "prediction": prediction_val,
             "probability": proba_val,
-            "log_id": log_entry.id # On renvoie l'ID du log pour preuve
+            "log_id": log_entry.id,  # On renvoie l'ID du log pour preuve
         }
 
     except Exception as e:
         print(f"Erreur : {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
