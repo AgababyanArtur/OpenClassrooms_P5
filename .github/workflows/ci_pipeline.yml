@@ -42,7 +42,7 @@ jobs:
         run: ruff check .
 
       - name: Run test with pytest
-        run: pytest tests/
+        run: uv run pytest tests/
 
   deploy-to-huggingface:
     name: Push to Hugging Face Hub
