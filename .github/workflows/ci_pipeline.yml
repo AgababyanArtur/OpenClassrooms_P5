@@ -65,6 +65,7 @@ jobs:
         run: |
           git config --global user.email "bot@github.com"
           git config --global user.name "GitHub Actions"
-          # L'utilisation de --force est correcte pour un déploiement miroir, 
-          # mais attention si tu modifies des fichiers directement sur Hugging Face.
-          git push https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME main:main --force
+          # On ajoute le remote Hugging Face
+          git remote add space https://oauth2:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME
+          # On force le push pour synchroniser
+          git push --force space main
