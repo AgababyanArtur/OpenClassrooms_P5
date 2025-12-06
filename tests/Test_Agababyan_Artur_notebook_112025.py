@@ -1,7 +1,6 @@
 # Fichier : tests/test_model_loading.py
 
 
-
 # Simulation de la librairie FastAPI pour l'exemple
 # Supposons qu'elle charge un modèle scikit-learn
 def load_model():
