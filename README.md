@@ -1,81 +1,136 @@
-Projet 5 : Déploiement d'un Modèle de Machine Learning en Production
+---
+title: Mon Projet 5 Data Science
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
+
+## Projet 5 : Déploiement d'un Modèle de Machine Learning en Production
 
 🚀 Mission : Rendre le Modèle Opérationnel
 
-Ce projet s'inscrit dans le cadre d'une mission de freelance pour Futurisys, une entreprise souhaitant industrialiser ses modèles de Machine Learning. L'objectif principal est de transformer un modèle prédictif existant (que nous allons intégrer) en un service accessible et fiable via une API.
+Ce projet répond à une demande de l'entreprise Futurisys. L'objectif est d'industrialiser un modèle de Machine Learning permettant de prédire le churn (départ des employés).
 
-Livrables Clés :
+Nous passons d'une analyse exploratoire (Notebook) à une véritable application en production (API), capable de recevoir des données, faire une prédiction et stocker l'historique pour le suivi (MLOps).
 
-API REST : Développée avec FastAPI pour exposer les prédictions du modèle.
+🏗 Architecture Technique
 
-Tests Unitaires : Mise en place de tests avec pytest pour garantir la fiabilité du code.
+1. L'application repose sur une architecture 3-tiers :
+2. L'API (FastAPI - app.py) : C'est le point d'entrée. Elle reçoit les requêtes HTTP, valide les données avec Pydantic et interroge le modèle.
+3. Le Modèle (Machine Learning - model/mon_modele.joblib) : Un modèle entraîné (Scikit-Learn/XGBoost) qui effectue la classification binaire (0: Reste, 1: Part).
+    * La Base de Données (PostgreSQL - database.py) :
+    * Stocke l'historique des employés (employees_history).
+    * Trace toutes les prédictions réalisées par l'API (prediction_logs) pour surveiller la performance dans le temps.
 
-Gestion de Version : Utilisation de Git pour le suivi des modifications, avec un historique clair et l'utilisation de branches de fonctionnalités.
+🛠 Installation et Configuration
 
-🏗 Architecture de la Solution
+Ce projet utilise uv pour une gestion ultra-rapide des dépendances.
 
-(Cette section sera complétée plus tard. Pour l'instant, elle sert de placeholder.)
+1. Prérequis
 
-Nous adopterons une architecture orientée service :
+    * Un système Linux/Mac ou WSL (Windows).
+    * Python 3.12+ installé.
+    * PostgreSQL installé et un serveur local en cours d'exécution.
+    * L'outil uv installé (pip install uv).
 
-Modèle ML : Le modèle entraîné (à intégrer).
+2. Cloner le projet
+    git clone [https://github.com/AgababyanArtur/OpenClassrooms_P5.git](https://github.com/AgababyanArtur/OpenClassrooms_P5.git)
+    cd Projet5
 
-API Gateway : FastAPI gère les requêtes HTTP, la validation des données d'entrée (via Pydantic) et appelle le modèle.
+3. Configuration de l'environnement (.env)
+    Pour des raisons de sécurité, les identifiants ne sont pas dans le code.
+    Créez un fichier .env à la racine du projet :
 
-Conteneurisation : (Ajouter Docker/Kubernetes si vous les utilisez dans les prochaines étapes).
-
-🛠 Installation et Démarrage (Workflow uv)
-
-Ce projet utilise le gestionnaire de paquets ultra-rapide uv pour la gestion des environnements virtuels et des dépendances, en se basant sur le fichier de configuration pyproject.toml.
-
-Prérequis
-
-Python 3.13.5 : La version de Python requise est gérée via pyenv pour assurer l'isolation (voir nos discussions).
-
-uv : Assurez-vous d'avoir uv installé globalement (pip install uv).
-
-1. Cloner le dépôt
-
-git clone https://github.com/AgababyanArtur/OpenClassrooms_P5
-cd Projet5
+    touch .env
 
 
-2. Configuration de l'environnement virtuel
+    Ouvrez-le et ajoutez votre configuration PostgreSQL :
 
-Nous allons créer un environnement virtuel isolé et installer toutes les dépendances listées dans pyproject.toml.
-
-# Créer l'environnement virtuel (.venv) en utilisant la version Python spécifiée par pyenv
-uv venv
-
-# Activer l'environnement
-source .venv/bin/activate
-
-# Installer les dépendances (y compris les dépendances de développement pour les tests, etc.)
-uv pip install -e . --dev 
+    # .env
+    DATABASE_URL=postgresql://postgres:votre_mot_de_passe@localhost/projet5_db
 
 
-3. Lancer l'API
+4. Installation des dépendances
 
-(À faire lors de l'étape 2. Vous devrez remplacer main.py par le nom de votre fichier principal FastAPI.)
+    # Créer l'environnement virtuel
+    uv venv
 
-# Lancement du serveur local Uvicorn
-uvicorn main:app --reload
+    # Activer l'environnement
+    source .venv/bin/activate
 
+    # Installer toutes les dépendances (y compris de dev)
+    uv pip install -e . --dev
+
+
+5. Initialisation de la Base de Données
+
+    Ce script va créer les tables et importer les données historiques depuis le CSV.
+
+    python init_db.py
+
+
+🚀 Démarrage de l'API
+
+Une fois installé, lancez le serveur de développement :
+
+uvicorn app:app --reload
+
+app : correspond au fichier app.py.
+
+app (le deuxième) : correspond à l'objet app = FastAPI(...) dans le fichier.
+
+--reload : redémarre le serveur si vous modifiez le code.
+
+L'API est accessible sur : http://127.0.0.1:8000
 
 ⚙ Utilisation de l'API
 
-🤝 Contribution (Git Workflow)
+1. Documentation interactive (Swagger UI)
 
-Branche Principale : main ou master. Seules les versions stables et testées y sont mergées.
+Rendez-vous sur http://127.0.0.1:8000/docs.
+Vous pourrez tester l'endpoint /predict directement depuis votre navigateur sans écrire de code.
 
-Branches de Fonctionnalités : Utiliser la convention feat/nom-de-la-feature (ex: feat/setup-fastapi).
+2. Exemple de requête (cURL)
 
-Commits : Utiliser les Conventional Commits (feat:, fix:, docs:, etc.) pour un historique clair.
+curl -X 'POST' \
+  '[http://127.0.0.1:8000/predict](http://127.0.0.1:8000/predict)' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "ratio_surcharge_anciennete": 0.15,
+    "nombre_participation_pee": 2,
+    "departement_consulting": 1.0,
+    "age": 34,
+    "poste_consultant": 1.0,
+    "tension_salaire": 0.005,
+    "statut_marital_marie": 1.0,
+    "annees_dans_l_entreprise": 5,
+    "satisfaction_globale_moyenne": 3.5,
+    "satisfaction_employee_nature_travail": 1
+  }'
 
-# Exemple de workflow pour une nouvelle fonctionnalité
-git checkout main
-git pull origin main
-git checkout -b feat/ajout-api-prediction
-# ... votre code ici ...
-git commit -m "feat: Ajout de l'endpoint de prédiction /predict"
-git push
+
+Réponse attendue :
+
+{
+  "prediction": 0,
+  "probability": 0.12,
+  "log_id": 42
+}
+
+
+✅ Tests Unitaires
+
+La qualité du code est assurée par pytest. Les tests utilisent une base de données SQLite en mémoire pour ne pas impacter votre base PostgreSQL de production.
+
+Pour lancer la suite de tests :
+
+pytest
+
+
+Si tout est vert, le projet est stable !
+
+🤝 Auteur
+
+Projet réalisé par Artur Agababyan dans le cadre de la formation Data Scientist OpenClassrooms.
