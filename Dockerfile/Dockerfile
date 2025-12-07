@@ -1,31 +1,36 @@
-# Utilisation de Python 3.13-slim pour être ISO avec ton pipeline CI/CD
 FROM python:3.13-slim
 
-# Définition du répertoire de travail dans le conteneur
 WORKDIR /app
 
-# Installation de curl et nettoyage du cache pour garder l'image légère
+# Installation des outils système de base
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Installation de uv (ton gestionnaire de paquets ultra-rapide)
+# Récupération de uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# 1. Copie de l'intégralité du projet
-# Important : On copie tout AVANT d'installer pour que 'pip install .' trouve le projet
-COPY . .
+# --- OPTIMISATION DU CACHE ---
+# 1. On ne copie QUE le fichier de configuration d'abord
+COPY pyproject.toml .
 
-# 2. Installation des dépendances
-# --system : installe directement dans le python global du conteneur
-# --no-cache : gagne de l'espace disque
+# 2. On installe les dépendances.
+# Docker gardera cette étape en cache tant que pyproject.toml ne change pas.
+# Même si tu modifies ton code app.py, cette étape sera sautée (gain de temps !)
 RUN uv pip install --system . --no-cache
 
-# Création d'un utilisateur non-root pour la sécurité (Standard Hugging Face)
+# 3. Maintenant, on copie le reste du code
+COPY . .
+
+# --- SÉCURITÉ & PERMISSIONS ---
+# Création de l'utilisateur
 RUN useradd -m -u 1000 user
+
+# IMPORTANT : Donner les droits à l'utilisateur sur le dossier /app
+# Sinon, s'il y a des fichiers temporaires ou des logs à écrire, ça plantera.
+RUN chown -R user:user /app
+
 USER user
 ENV PATH="/home/user/.local/bin:$PATH"
 
-# Exposition du port 7860
 EXPOSE 7860
 
-# Lancement de l'application
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
