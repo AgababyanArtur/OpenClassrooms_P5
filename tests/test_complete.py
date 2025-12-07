@@ -56,9 +56,7 @@ def test_home():
 
 
 def test_prediction_workflow_churn():
-    """
-    Scénario : Un employé à risque (Churn=1).
-    """
+    """Scénario : Un employé à risque (Churn=1)."""
     payload = {
         "ratio_surcharge_anciennete": 0.14,
         "nombre_participation_pee": 0,
@@ -115,10 +113,30 @@ def test_prediction_workflow_loyal():
         assert response.json()["prediction"] == 0
 
 
+def test_prediction_invalid_data():
+    """
+    NOUVEAU TEST (Répond à la demande du mentor) :
+    Vérifie que l'API rejette les données incorrectes (ex: string au lieu de int).
+    """
+    # Payload invalide : 'age' est une chaîne de caractères, 'ratio' manquant
+    payload = {
+        "nombre_participation_pee": 0,
+        "departement_consulting": 0.0,
+        "age": "JE SUIS UNE ERREUR",  # <--- Erreur de type
+        "poste_consultant": 0.0,
+        # Manque plein de champs obligatoires
+    }
+
+    response = client.post("/predict", json=payload)
+
+    # Pydantic doit renvoyer une erreur 422 (Unprocessable Entity)
+    assert response.status_code == 422
+    # On vérifie que l'erreur concerne bien les champs manquants ou invalides
+    assert "detail" in response.json()
+
+
 def test_prediction_error_handling():
-    """
-    Vérifie la gestion d'erreur quand le modèle plante.
-    """
+    """Vérifie la gestion d'erreur quand le modèle plante."""
     payload = {
         "ratio_surcharge_anciennete": 0.14,
         "nombre_participation_pee": 0,
@@ -133,15 +151,10 @@ def test_prediction_error_handling():
     }
 
     with patch("app.model") as mock_model:
-        # On force le modèle à planter
         mock_model.predict.side_effect = Exception("Boom! Modèle cassé")
 
         response = client.post("/predict", json=payload)
 
-        # CORRECTION ICI :
-        # Ton API renvoie 400 (Bad Request) quand elle attrape une exception.
-        # On accepte 400 ou 500 pour être robuste.
+        # On accepte 400 ou 500 selon la gestion d'erreur dans app.py
         assert response.status_code in [400, 500]
-
-        # On vérifie qu'on a bien un détail d'erreur dans la réponse
         assert "detail" in response.json()
