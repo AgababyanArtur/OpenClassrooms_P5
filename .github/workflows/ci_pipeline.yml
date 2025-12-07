@@ -7,14 +7,15 @@ on:
     branches: ["main"]
 
 jobs:
-  # 1. On fusionne Lint et Test en un seul job "Quality & Test"
+  # JOB 1 : Qualité et Tests
   build-and-test:
     name: Code Quality & Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
+      # Installation de uv
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
@@ -26,46 +27,52 @@ jobs:
         with:
           python-version: "3.13"
 
-      # 2. Optimisation : Installation unique de TOUTES les dépendances
-      # Astuce : Défini tes outils de dev (black, ruff, pytest) dans pyproject.toml
-      # Si tu ne l'as pas fait, la commande ci-dessous les installe manuellement mais en une fois.
+      # Installation des dépendances
       - name: Install dependencies
         run: |
-          uv pip install --system . 
-          uv pip install --system ruff black pytest
+          uv pip install --system .
+          uv pip install --system ruff black pytest httpx
 
-      # 3. Exécution séquentielle : Si le formatage échoue, on s'arrête là (fail-fast)
+      # Vérification du formatage (Black)
       - name: Check formatting with Black
         run: black --check .
 
+      # Analyse statique du code (Ruff)
       - name: Lint With Ruff
         run: ruff check .
 
+      # Exécution des tests unitaires
       - name: Run test with pytest
         run: uv run pytest tests/
 
+  # JOB 2 : Déploiement Continu (CD)
   deploy-to-huggingface:
     name: Push to Hugging Face Hub
-    # Ce job ne démarre que si 'build-and-test' a réussi
-    needs: [build-and-test] 
+    # Ne s'exécute que si les tests passent ET qu'on est sur un push vers main
+    needs: [build-and-test]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          lfs: true
+          lfs: true # Important pour tes modèles ML (.joblib ou .h5)
 
-      - name: Push to Hub
+      - name: Push to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_USERNAME: "ArturAgababyanML"
-          HF_SPACE_NAME: "projt5"
+          HF_USERNAME: "ArturAgababyanML" # Ton nom d'utilisateur
+          HF_SPACE_NAME: "projet5"        # Le nom EXACT de ton Space
         run: |
+          echo "Initialisation de git..."
           git config --global user.email "bot@github.com"
           git config --global user.name "GitHub Actions"
-          # On ajoute le remote Hugging Face
-          git remote add space https://oauth2:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME
-          # On force le push pour synchroniser
+          
+          # Ajout du remote Hugging Face avec le token sécurisé
+          git remote add space https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME
+          
+          # Force push pour synchroniser le Space avec le repo GitHub
+          # Le --force est utile ici pour écraser l'historique du Space si besoin et s'assurer qu'il est iso-prod avec GitHub
           git push --force space main
