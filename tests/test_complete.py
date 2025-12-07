@@ -21,6 +21,7 @@ engine_test = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine_test)
 
+
 def override_get_db():
     try:
         db = TestingSessionLocal()
@@ -28,9 +29,11 @@ def override_get_db():
     finally:
         db.close()
 
+
 app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
+
 
 @pytest.fixture(autouse=True)
 def setup_database():
@@ -38,9 +41,11 @@ def setup_database():
     yield
     Base.metadata.drop_all(bind=engine_test)
 
+
 # ==========================================
 # LES TESTS
 # ==========================================
+
 
 def test_home():
     """
@@ -51,12 +56,13 @@ def test_home():
     # Correction ici pour correspondre à ton nouveau message dans app.py
     assert response.json() == {"message": "API connectée à PostgreSQL !"}
 
+
 def test_prediction_workflow_churn():
     """Scénario : Un employé à risque (Churn=1)"""
     # Pour éviter l'erreur si le modèle n'est pas chargé (cas limite), on peut mocker predict
     # Mais si tu as corrigé le YAML, le vrai modèle devrait charger.
     # Ici, on teste l'intégration complète.
-    
+
     payload = {
         "ratio_surcharge_anciennete": 0.14,
         "nombre_participation_pee": 0,
@@ -80,6 +86,7 @@ def test_prediction_workflow_churn():
     response = client.post("/predict", json=payload)
     assert response.status_code == 200
     assert response.json()["prediction"] is not None
+
 
 def test_prediction_error_handling():
     """Vérifie la gestion d'erreur quand le modèle plante"""
