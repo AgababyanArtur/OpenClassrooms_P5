@@ -7,130 +7,140 @@ sdk: docker
 app_port: 7860
 ---
 
-## Projet 5 : Déploiement d'un Modèle de Machine Learning en Production
+Projet 5 : Déploiement d'un modèle de prédiction de Churn
 
-🚀 Mission : Rendre le Modèle Opérationnel
+Ce projet vise à industrialiser un modèle de Machine Learning permettant de prédire le risque de départ (Churn) d'un employé.
+L'application expose le modèle via une API FastAPI, stocke les historiques de prédiction dans une base PostgreSQL, et est déployée automatiquement sur Hugging Face Spaces via un pipeline CI/CD.
 
-Ce projet répond à une demande de l'entreprise Futurisys. L'objectif est d'industrialiser un modèle de Machine Learning permettant de prédire le churn (départ des employés).
+🚀 Fonctionnalités
 
-Nous passons d'une analyse exploratoire (Notebook) à une véritable application en production (API), capable de recevoir des données, faire une prédiction et stocker l'historique pour le suivi (MLOps).
+API REST rapide et documentée (FastAPI).
 
-🏗 Architecture Technique
+Modèle ML : Prédiction binaire (Churn / Pas Churn) avec probabilités.
 
-1. L'application repose sur une architecture 3-tiers :
-2. L'API (FastAPI - app.py) : C'est le point d'entrée. Elle reçoit les requêtes HTTP, valide les données avec Pydantic et interroge le modèle.
-3. Le Modèle (Machine Learning - model/mon_modele.joblib) : Un modèle entraîné (Scikit-Learn/XGBoost) qui effectue la classification binaire (0: Reste, 1: Part).
-    * La Base de Données (PostgreSQL - database.py) :
-    * Stocke l'historique des employés (employees_history).
-    * Trace toutes les prédictions réalisées par l'API (prediction_logs) pour surveiller la performance dans le temps.
+Validation des données robuste avec Pydantic.
 
-🛠 Installation et Configuration
+Traçabilité : Chaque requête est loggée en base de données.
 
-Ce projet utilise uv pour une gestion ultra-rapide des dépendances.
+CI/CD : Tests et déploiement automatisés via GitHub Actions.
 
-1. Prérequis
+Conteneurisation : Application packagée avec Docker.
 
-    * Un système Linux/Mac ou WSL (Windows).
-    * Python 3.12+ installé.
-    * PostgreSQL installé et un serveur local en cours d'exécution.
-    * L'outil uv installé (pip install uv).
+🛠️ Installation en local
 
-2. Cloner le projet
-    git clone [https://github.com/AgababyanArtur/OpenClassrooms_P5.git](https://github.com/AgababyanArtur/OpenClassrooms_P5.git)
-    cd Projet5
+Prérequis
 
-3. Configuration de l'environnement (.env)
-    Pour des raisons de sécurité, les identifiants ne sont pas dans le code.
-    Créez un fichier .env à la racine du projet :
+Python 3.12+
 
-    touch .env
+PostgreSQL (ou adaptation pour SQLite)
+
+uv (recommandé) ou pip
+
+1. Cloner le projet
+
+git clone [https://github.com/TonPseudo/TonProjet.git](https://github.com/TonPseudo/TonProjet.git)
+cd TonProjet
 
 
-    Ouvrez-le et ajoutez votre configuration PostgreSQL :
+2. Installer les dépendances
 
-    # .env
-    DATABASE_URL=postgresql://postgres:votre_mot_de_passe@localhost/projet5_db
+Avec uv (plus rapide) :
 
-
-4. Installation des dépendances
-
-    # Créer l'environnement virtuel
-    uv venv
-
-    # Activer l'environnement
-    source .venv/bin/activate
-
-    # Installer toutes les dépendances (y compris de dev)
-    uv pip install -e . --dev
+uv pip install -r pyproject.toml --system
 
 
-5. Initialisation de la Base de Données
+Ou avec pip classique :
 
-    Ce script va créer les tables et importer les données historiques depuis le CSV.
-
-    python init_db.py
+pip install .
 
 
-🚀 Démarrage de l'API
+3. Configurer la Base de Données
 
-Une fois installé, lancez le serveur de développement :
+Assurez-vous d'avoir une base PostgreSQL active. Modifiez l'URL de connexion dans database.py si nécessaire, ou définissez une variable d'environnement (recommandé pour la prod).
+
+# Créer les tables
+python create_tables.py
+
+# (Optionnel) Peupler avec des données initiales
+python init_db.py
+
+
+4. Lancer l'API
 
 uvicorn app:app --reload
 
-app : correspond au fichier app.py.
 
-app (le deuxième) : correspond à l'objet app = FastAPI(...) dans le fichier.
+L'API sera accessible sur : http://127.0.0.1:8000
 
---reload : redémarre le serveur si vous modifiez le code.
+🧪 Tests et Qualité
 
-L'API est accessible sur : http://127.0.0.1:8000
+Le projet inclut une suite de tests unitaires (pytest) et une analyse de qualité de code (Ruff, Black).
 
-⚙ Utilisation de l'API
+Pour lancer les tests avec couverture de code :
 
-1. Documentation interactive (Swagger UI)
-
-Rendez-vous sur http://127.0.0.1:8000/docs.
-Vous pourrez tester l'endpoint /predict directement depuis votre navigateur sans écrire de code.
-
-2. Exemple de requête (cURL)
-
-curl -X 'POST' \
-  '[http://127.0.0.1:8000/predict](http://127.0.0.1:8000/predict)' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "ratio_surcharge_anciennete": 0.15,
-    "nombre_participation_pee": 2,
-    "departement_consulting": 1.0,
-    "age": 34,
-    "poste_consultant": 1.0,
-    "tension_salaire": 0.005,
-    "statut_marital_marie": 1.0,
-    "annees_dans_l_entreprise": 5,
-    "satisfaction_globale_moyenne": 3.5,
-    "satisfaction_employee_nature_travail": 1
-  }'
+uv run pytest --cov=app tests/
 
 
-Réponse attendue :
+Pour vérifier le formatage :
+
+uv run ruff check .
+uv run black --check .
+
+
+🐳 Utilisation avec Docker
+
+L'application est prête à être conteneurisée.
+
+Construire l'image
+
+docker build -t projet5-churn-api .
+
+
+Lancer le conteneur
+
+docker run -p 7860:7860 projet5-churn-api
+
+
+L'API sera accessible sur http://localhost:7860.
+
+📚 Documentation API (Swagger)
+
+Une fois l'application lancée, la documentation interactive est disponible sur :
+
+Swagger UI : /docs (Testez les endpoints en direct)
+
+ReDoc : /redoc
+
+Endpoint Principal : /predict
+
+Méthode : POST
+
+Description : Reçoit les données d'un employé et retourne la prédiction de churn.
+
+Exemple de Body :
 
 {
-  "prediction": 0,
-  "probability": 0.12,
-  "log_id": 42
+  "ratio_surcharge_anciennete": 0.14,
+  "nombre_participation_pee": 0,
+  "departement_consulting": 0.0,
+  "age": 41,
+  "poste_consultant": 0.0,
+  "tension_salaire": 0.0003,
+  "statut_marital_marie": 0.0,
+  "annees_dans_l_entreprise": 2,
+  "satisfaction_globale_moyenne": 2.0,
+  "satisfaction_employee_nature_travail": 1
 }
 
 
-✅ Tests Unitaires
+⚙️ Pipeline CI/CD
 
-La qualité du code est assurée par pytest. Les tests utilisent une base de données SQLite en mémoire pour ne pas impacter votre base PostgreSQL de production.
+Le projet utilise GitHub Actions pour l'intégration continue.
 
-Pour lancer la suite de tests :
+Job build-and-test : Installe les dépendances, vérifie le code (Lint) et lance les tests.
 
-pytest
+Job deploy-to-huggingface : Si les tests passent (sur la branche main), le code est déployé automatiquement sur Hugging Face Spaces.
 
+👤 Auteur
 
-Si tout est vert, le projet est stable !
-
-🤝 Auteur
-
-Projet réalisé par Artur Agababyan dans le cadre de la formation Data Scientist OpenClassrooms.
+Artur Agababyan - Étudiant Data Scientist
