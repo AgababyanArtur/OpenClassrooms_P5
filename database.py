@@ -1,14 +1,24 @@
+import os
 import datetime
 from sqlalchemy import create_engine, Column, Integer, Float, DateTime, JSON
 from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
 
 # ==========================================
 # 1. Configuration de la connexion
 # ==========================================
 
-# Format de l'URL : postgresql://utilisateur:mot_de_passe@adresse:port/nom_bdd
-# Remplace 'admin' par ton mot de passe si tu en as choisi un autre.
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:admin@localhost/projet5_db"
+# Charge les variables contenues dans le fichier .env
+load_dotenv()
+
+# Récupère l'URL depuis l'environnement
+# Si la variable n'existe pas (ex: oubli), ça renvoie None ou une valeur par défaut
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not SQLALCHEMY_DATABASE_URL:
+    raise ValueError(
+        "❌ ERREUR CRITIQUE : La variable DATABASE_URL est introuvable. Vérifie ton fichier .env !"
+    )
 
 # Création du moteur (le "cerveau" de la connexion)
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
