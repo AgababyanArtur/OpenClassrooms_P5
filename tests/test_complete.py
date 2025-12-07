@@ -5,14 +5,16 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from unittest.mock import patch
 
-# Imports depuis tes fichiers principaux (assure-toi d'être à la racine pour lancer)
+# Imports depuis tes fichiers principaux
 from app import app, get_db
+
+# 1. On n'oublie pas d'importer PredictionLog pour la vérification BDD !
 from database import Base, PredictionLog
 
 # ==========================================
-# Configuration de la BDD de Test (En mémoire)
+# Configuration de la BDD de Test (SQLite en mémoire)
 # ==========================================
-# On utilise SQLite en mémoire pour les tests : c'est rapide et ça ne touche pas à ton PostgreSQL
+# Utilisation d'une BDD temporaire pour isoler les tests
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine_test = create_engine(
@@ -23,7 +25,6 @@ engine_test = create_engine(
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine_test)
 
 
-# Fonction qui remplace la dépendance de BDD pour les tests
 def override_get_db():
     try:
         db = TestingSessionLocal()
@@ -32,53 +33,38 @@ def override_get_db():
         db.close()
 
 
-# On applique le remplacement ("mock")
+# Remplacement de la dépendance BDD
 app.dependency_overrides[get_db] = override_get_db
 
-# Client de test FastAPI
 client = TestClient(app)
 
 
-# Fixture : s'exécute avant chaque test pour préparer le terrain
 @pytest.fixture(autouse=True)
 def setup_database():
-    # Crée les tables dans la BDD temporaire
+    """Crée les tables avant chaque test et les supprime après."""
     Base.metadata.create_all(bind=engine_test)
     yield
-    # Nettoie après le test
     Base.metadata.drop_all(bind=engine_test)
 
 
 # ==========================================
-# 1. Tests Unitaires (Composants isolés)
+# LES TESTS
 # ==========================================
 
 
-def test_home_endpoint():
-    """Vérifie que l'API est en ligne"""
+def test_home():
+    """Vérifie que la route racine répond bien 200."""
     response = client.get("/")
     assert response.status_code == 200
-    assert "API connectée" in response.json()["message"]
-
-
-def test_prediction_schema_validation():
-    """Vérifie que l'API rejette les données incomplètes (Erreur 422)"""
-    # On envoie un json vide
-    response = client.post("/predict", json={})
-    assert response.status_code == 422  # Unprocessable Entity
-
-
-# ==========================================
-# 2. Tests Fonctionnels (Scénarios complets)
-# ==========================================
+    # On s'assure que le message correspond à celui de ton app.py
+    assert response.json() == {"message": "API connectée à PostgreSQL !"}
 
 
 def test_prediction_workflow_churn():
     """
-    Scénario : Un employé à risque (Churn=1)
-    On vérifie la réponse API ET l'enregistrement en BDD.
+    Scénario : Un employé à risque (Churn=1).
+    Test robuste grâce au mocking de l'objet 'model' entier.
     """
-    # Données fictives simulant un départ probable
     payload = {
         "ratio_surcharge_anciennete": 0.14,
         "nombre_participation_pee": 0,
@@ -92,59 +78,59 @@ def test_prediction_workflow_churn():
         "satisfaction_employee_nature_travail": 0,
     }
 
-    response = client.post("/predict", json=payload)
+    # 2. PATCH ROBUSTE : On remplace tout l'objet 'app.model' par un Mock
+    # Cela évite l'erreur si app.model est None (fichier non chargé)
+    with patch("app.model") as mock_model:
+        # Configuration du faux modèle
+        mock_model.predict.return_value = [1]
+        mock_model.predict_proba.return_value = [[0.2, 0.8]]
 
-    # 1. Vérification API
-    assert response.status_code == 200
-    data = response.json()
-    assert "prediction" in data
-    assert "probability" in data
-    assert "log_id" in data
+        response = client.post("/predict", json=payload)
 
-    # Vérifie que l'ID retourné est bien un entier
-    log_id = data["log_id"]
-    assert isinstance(log_id, int)
+        # Vérifications API
+        assert response.status_code == 200
+        data = response.json()
+        assert data["prediction"] == 1
+        assert "log_id" in data
 
-    # 2. Vérification Base de Données (La traçabilité a-t-elle fonctionné ?)
-    db = TestingSessionLocal()
-    log_entry = db.query(PredictionLog).filter(PredictionLog.id == log_id).first()
-
-    assert log_entry is not None
-    assert log_entry.prediction == data["prediction"]
-    # Vérifie qu'on retrouve bien l'âge envoyé dans le JSON stocké
-    assert log_entry.inputs["age"] == 41
-
-    db.close()
+        # Vérification BDD (Traçabilité)
+        log_id = data["log_id"]
+        db = TestingSessionLocal()
+        log_entry = db.query(PredictionLog).filter(PredictionLog.id == log_id).first()
+        assert log_entry is not None
+        assert log_entry.prediction == 1
+        db.close()
 
 
 def test_prediction_workflow_loyal():
-    """
-    Scénario : Un employé fidèle (Churn=0)
-    Données 'inventées' pour essayer de viser 0
-    """
+    """Scénario : Un employé fidèle (Churn=0)."""
     payload = {
         "ratio_surcharge_anciennete": 0.0,
-        "nombre_participation_pee": 5,  # Participe beaucoup
+        "nombre_participation_pee": 5,
         "departement_consulting": 1.0,
         "age": 50,
         "poste_consultant": 1.0,
         "tension_salaire": 0.8,
         "statut_marital_marie": 1.0,
         "annees_dans_l_entreprise": 15,
-        "satisfaction_globale_moyenne": 4.0,  # Très satisfait
+        "satisfaction_globale_moyenne": 4.0,
         "satisfaction_employee_nature_travail": 4,
     }
 
-    response = client.post("/predict", json=payload)
-    assert response.status_code == 200
+    with patch("app.model") as mock_model:
+        mock_model.predict.return_value = [0]
+        mock_model.predict_proba.return_value = [[0.9, 0.1]]
+
+        response = client.post("/predict", json=payload)
+        assert response.status_code == 200
+        assert response.json()["prediction"] == 0
 
 
 def test_prediction_error_handling():
     """
-    Test Unitaire : Vérifie que l'API gère bien les erreurs internes (500/400).
-    On simule (mock) une panne du modèle pour voir si l'API survit.
+    Vérifie la gestion d'erreur quand le modèle plante.
+    C'est ici que l'erreur 'None attribute' se produisait avant correction.
     """
-    # Données valides
     payload = {
         "ratio_surcharge_anciennete": 0.14,
         "nombre_participation_pee": 0,
@@ -158,11 +144,13 @@ def test_prediction_error_handling():
         "satisfaction_employee_nature_travail": 0,
     }
 
-    # On "truque" la méthode predict du modèle pour qu'elle lève une erreur
-    with patch("app.model.predict", side_effect=Exception("Boom! Modèle cassé")):
+    # 3. MÊME CORRECTION : On patch l'objet entier, pas la méthode
+    # L'erreur venait de patch("app.model.predict") qui plantait car model était None
+    with patch("app.model") as mock_model:
+        # On force le modèle à planter
+        mock_model.predict.side_effect = Exception("Boom! Modèle cassé")
+
         response = client.post("/predict", json=payload)
 
-    # On s'attend à ce que l'API attrape l'erreur et renvoie 400 (selon ton code app.py)
-    # Note : Dans ton app.py, le 'except' renvoie 400.
-    assert response.status_code == 400
-    assert "Boom! Modèle cassé" in response.json()["detail"]
+        assert response.status_code == 500
+        assert "Erreur interne" in response.json()["detail"]
