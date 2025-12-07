@@ -5,13 +5,14 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from unittest.mock import patch
 
-# Imports depuis tes fichiers principaux
+# Imports depuis tes fichiers principaux (assure-toi d'être à la racine pour lancer)
 from app import app, get_db
 from database import Base, PredictionLog
 
 # ==========================================
-# Configuration de la BDD de Test (SQLite en mémoire)
+# Configuration de la BDD de Test (En mémoire)
 # ==========================================
+# On utilise SQLite en mémoire pour les tests : c'est rapide et ça ne touche pas à ton PostgreSQL
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine_test = create_engine(
