@@ -81,6 +81,7 @@ def test_prediction_workflow_churn():
         assert data["prediction"] == 1
         assert "log_id" in data
 
+        # Vérification BDD
         log_id = data["log_id"]
         db = TestingSessionLocal()
         log_entry = db.query(PredictionLog).filter(PredictionLog.id == log_id).first()
@@ -115,7 +116,7 @@ def test_prediction_workflow_loyal():
 
 def test_prediction_invalid_data():
     """
-    NOUVEAU TEST (Répond à la demande du mentor) :
+    Test de Robustesse (Validation) :
     Vérifie que l'API rejette les données incorrectes (ex: string au lieu de int).
     """
     # Payload invalide : 'age' est une chaîne de caractères, 'ratio' manquant
@@ -151,6 +152,7 @@ def test_prediction_error_handling():
     }
 
     with patch("app.model") as mock_model:
+        # On force le modèle à planter
         mock_model.predict.side_effect = Exception("Boom! Modèle cassé")
 
         response = client.post("/predict", json=payload)
