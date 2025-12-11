@@ -1,146 +1,120 @@
----
-title: Mon Projet 5 Data Science
-emoji: 🚀
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
----
+🔮 Projet 5 : API de Prédiction de Churn Employé
 
-Projet 5 : Déploiement d'un modèle de prédiction de Churn
+📄 Description
 
-Ce projet vise à industrialiser un modèle de Machine Learning permettant de prédire le risque de départ (Churn) d'un employé.
-L'application expose le modèle via une API FastAPI, stocke les historiques de prédiction dans une base PostgreSQL, et est déployée automatiquement sur Hugging Face Spaces via un pipeline CI/CD.
+Ce projet est une solution MLOps complète visant à prédire le risque de départ (Churn) d'un employé au sein d'une entreprise.
+Il permet aux équipes RH d'anticiper les départs grâce à une API REST exposant un modèle de Machine Learning entraîné sur des données historiques.
 
-🚀 Fonctionnalités
+L'architecture respecte les principes DevOps/MLOps :
 
-API REST rapide et documentée (FastAPI).
+API : FastAPI (rapide et typé).
 
-Modèle ML : Prédiction binaire (Churn / Pas Churn) avec probabilités.
+Database : PostgreSQL pour l'historisation des prédictions.
 
-Validation des données robuste avec Pydantic.
+Qualité : Tests unitaires (pytest), Linting (Ruff), Formatage (Black).
 
-Traçabilité : Chaque requête est loggée en base de données.
+CI/CD : Pipeline GitHub Actions automatisé.
 
-CI/CD : Tests et déploiement automatisés via GitHub Actions.
+Déploiement : Conteneurisation Docker sur Hugging Face Spaces.
 
-Conteneurisation : Application packagée avec Docker.
+🏗️ Architecture Technique
 
-🛠️ Installation en local
+Le projet est structuré comme suit :
+
+app.py : Point d'entrée de l'API FastAPI.
+
+model/ : Contient le modèle entraîné (.joblib).
+
+tests/ : Suite de tests unitaires et fonctionnels.
+
+database.py : Gestion de la connexion BDD (SQLAlchemy).
+
+.github/workflows/ : Pipeline CI/CD.
+
+🚀 Installation et Démarrage
 
 Prérequis
 
-Python 3.12+
+Python 3.12 ou supérieur
 
-PostgreSQL (ou adaptation pour SQLite)
+Docker (optionnel)
 
-uv (recommandé) ou pip
+Git
 
-1. Cloner le projet
+1. Clonage du projet
 
-git clone [https://github.com/TonPseudo/TonProjet.git](https://github.com/TonPseudo/TonProjet.git)
-cd TonProjet
-
-
-2. Installer les dépendances
-
-Avec uv (plus rapide) :
-
-uv pip install -r pyproject.toml --system
+git clone [https://github.com/AgababyanArtur/OpenClassrooms_P5.git](https://github.com/AgababyanArtur/OpenClassrooms_P5.git)
+cd OpenClassrooms_P5
 
 
-Ou avec pip classique :
+2. Installation (Local)
 
+Nous recommandons l'utilisation de uv pour la rapidité, ou pip.
+
+# Avec pip
 pip install .
 
-
-3. Configurer la Base de Données
-
-Assurez-vous d'avoir une base PostgreSQL active. Modifiez l'URL de connexion dans database.py si nécessaire, ou définissez une variable d'environnement (recommandé pour la prod).
-
-# Créer les tables
-python create_tables.py
-
-# (Optionnel) Peupler avec des données initiales
-python init_db.py
+# Avec uv (recommandé)
+uv pip install --system .
 
 
-4. Lancer l'API
+3. Configuration
+
+Créez un fichier .env à la racine pour configurer la base de données :
+
+DATABASE_URL=postgresql://user:password@localhost/dbname
+
+
+Note : Pour les tests, une base SQLite en mémoire est utilisée automatiquement.
+
+4. Lancement de l'API
 
 uvicorn app:app --reload
 
 
-L'API sera accessible sur : http://127.0.0.1:8000
-
-🧪 Tests et Qualité
-
-Le projet inclut une suite de tests unitaires (pytest) et une analyse de qualité de code (Ruff, Black).
-
-Pour lancer les tests avec couverture de code :
-
-uv run pytest --cov=app tests/
-
-
-Pour vérifier le formatage :
-
-uv run ruff check .
-uv run black --check .
-
+L'API sera accessible sur http://127.0.0.1:8000.
 
 🐳 Utilisation avec Docker
 
-L'application est prête à être conteneurisée.
+Pour lancer l'application dans un conteneur isolé (comme sur la prod) :
 
-Construire l'image
+# 1. Construire l'image
+docker build -t churn-api .
 
-docker build -t projet5-churn-api .
-
-
-Lancer le conteneur
-
-docker run -p 7860:7860 projet5-churn-api
+# 2. Lancer le conteneur (Port 7860 pour compatibilité Hugging Face)
+docker run -p 7860:7860 churn-api
 
 
-L'API sera accessible sur http://localhost:7860.
+Accès : http://localhost:7860
 
-📚 Documentation API (Swagger)
+🧪 Tests et Qualité
 
-Une fois l'application lancée, la documentation interactive est disponible sur :
+La robustesse du code est assurée par une suite de tests automatisés.
 
-Swagger UI : /docs (Testez les endpoints en direct)
+# Lancer les tests
+uv run pytest tests/
 
-ReDoc : /redoc
+# Vérifier la couverture de code
+uv run pytest --cov=app tests/
+
+
+📚 Documentation API
+
+La documentation interactive (Swagger UI) est générée automatiquement par FastAPI.
+Une fois l'API lancée, visitez :
+
+Swagger : http://127.0.0.1:8000/docs
+
+Redoc : http://127.0.0.1:8000/redoc
 
 Endpoint Principal : /predict
 
 Méthode : POST
 
-Description : Reçoit les données d'un employé et retourne la prédiction de churn.
+Input : JSON contenant les caractéristiques de l'employé (age, ancienneté, etc.).
 
-Exemple de Body :
-
-{
-  "ratio_surcharge_anciennete": 0.14,
-  "nombre_participation_pee": 0,
-  "departement_consulting": 0.0,
-  "age": 41,
-  "poste_consultant": 0.0,
-  "tension_salaire": 0.0003,
-  "statut_marital_marie": 0.0,
-  "annees_dans_l_entreprise": 2,
-  "satisfaction_globale_moyenne": 2.0,
-  "satisfaction_employee_nature_travail": 1
-}
-
-
-⚙️ Pipeline CI/CD
-
-Le projet utilise GitHub Actions pour l'intégration continue.
-
-Job build-and-test : Installe les dépendances, vérifie le code (Lint) et lance les tests.
-
-Job deploy-to-huggingface : Si les tests passent (sur la branche main), le code est déployé automatiquement sur Hugging Face Spaces.
+Output : Prédiction (0 ou 1) et probabilité associée.
 
 👤 Auteur
 
-Artur Agababyan - Étudiant Data Scientist
+Artur Agababyan - Étudiant Data Scientist OpenClassrooms.

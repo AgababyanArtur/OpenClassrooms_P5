@@ -2,7 +2,7 @@ import uvicorn
 import pandas as pd
 import joblib
 from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 import datetime
 
@@ -13,10 +13,29 @@ from database import SessionLocal, PredictionLog
 # 1. Configuration et Chargement
 # ==========================================
 
+# Description riche pour la documentation (Markdown supporté)
+description = """
+API de prédiction de churn (départ) des employés. 🚀
+
+Cette API permet aux équipes RH d'estimer la probabilité de départ d'un collaborateur
+basée sur des données historiques.
+
+## Fonctionnalités
+* **Prédiction** : Classification binaire (Départ/Reste) via un modèle de Machine Learning.
+* **Traçabilité** : Chaque requête est enregistrée dans une base PostgreSQL.
+
+## Données attendues
+Les données doivent être envoyées au format JSON via l'endpoint `/predict`.
+"""
+
 app = FastAPI(
-    title="API de Prédiction - Projet 5",
-    description="API avec traçabilité dans PostgreSQL.",
+    title="Projet 5 : Churn Prediction API",
+    description=description,
     version="1.0.0",
+    contact={
+        "name": "Artur Agababyan",
+        "url": "https://github.com/AgababyanArtur/OpenClassrooms_P5",
+    },
 )
 
 MODEL_PATH = "model/mon_modele.joblib"
@@ -39,55 +58,129 @@ def get_db():
 
 
 # ==========================================
-# 2. Définition du Schéma de Données
+# 2. Définition du Schéma de Données (Pydantic)
 # ==========================================
 
 
 class InputData(BaseModel):
-    ratio_surcharge_anciennete: float
-    nombre_participation_pee: int
-    departement_consulting: float
-    age: int
-    poste_consultant: float
-    tension_salaire: float
-    statut_marital_marie: float
-    annees_dans_l_entreprise: int
-    satisfaction_globale_moyenne: float
-    satisfaction_employee_nature_travail: int
+    """
+    Modèle de données d'entrée avec validation et documentation intégrée.
+    """
+
+    ratio_surcharge_anciennete: float = Field(
+        ...,
+        description="Ratio calculé entre la charge de travail et l'ancienneté.",
+        example=0.14,
+    )
+    nombre_participation_pee: int = Field(
+        ..., description="Nombre de fois où l'employé a participé au PEE.", example=0
+    )
+    departement_consulting: float = Field(
+        ...,
+        description="Indicateur binaire (1.0 = Consulting, 0.0 = Autre).",
+        example=0.0,
+    )
+    age: int = Field(
+        ..., description="Âge de l'employé en années.", ge=18, le=100, example=41
+    )
+    poste_consultant: float = Field(
+        ...,
+        description="Indicateur binaire du poste (1.0 = Consultant).",
+        example=0.0,
+    )
+    tension_salaire: float = Field(
+        ..., description="Score de tension salariale (écart marché).", example=0.0003
+    )
+    statut_marital_marie: float = Field(
+        ...,
+        description="Statut marital (1.0 = Marié, 0.0 = Autre).",
+        example=0.0,
+    )
+    annees_dans_l_entreprise: int = Field(
+        ..., description="Nombre d'années d'ancienneté.", ge=0, example=2
+    )
+    satisfaction_globale_moyenne: float = Field(
+        ..., description="Note moyenne de satisfaction (sur 5 ou 10).", example=2.0
+    )
+    satisfaction_employee_nature_travail: int = Field(
+        ..., description="Note de satisfaction sur la nature du travail.", example=1
+    )
+
+    # Exemple complet visible dans Swagger UI
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "ratio_surcharge_anciennete": 0.14,
+                "nombre_participation_pee": 0,
+                "departement_consulting": 0.0,
+                "age": 41,
+                "poste_consultant": 0.0,
+                "tension_salaire": 0.0003,
+                "statut_marital_marie": 0.0,
+                "annees_dans_l_entreprise": 2,
+                "satisfaction_globale_moyenne": 2.0,
+                "satisfaction_employee_nature_travail": 1,
+            }
+        }
 
 
 # ==========================================
-# 3. Endpoints
+# 3. Route de Prédiction
 # ==========================================
 
 
 @app.get("/")
 def home():
+    """Route de vérification de l'état de l'API."""
     return {"message": "API connectée à PostgreSQL !"}
 
 
-@app.post("/predict")
-def predict(data: InputData, db: Session = Depends(get_db)):
+@app.post(
+    "/predict",
+    summary="Prédire le risque de churn",
+    description="Cette route reçoit les données socio-professionnelles d'un employé et retourne la prédiction du modèle (0 ou 1) ainsi que la probabilité associée. La requête est enregistrée en base de données.",
+    tags=["Prédiction"],
+    responses={
+        200: {
+            "description": "Succès. Retourne la prédiction et l'ID du log.",
+            "content": {
+                "application/json": {
+                    "example": {"prediction": 1, "probability": 0.85, "log_id": 42}
+                }
+            },
+        },
+        422: {"description": "Erreur de validation (données manquantes ou incorrectes)."},
+        500: {"description": "Erreur interne (modèle non chargé ou erreur BDD)."},
+    },
+)
+def predict(input_data: InputData, db: Session = Depends(get_db)):
     """
-    Reçoit les données, fait une prédiction, et SAUVEGARDE tout dans la BDD.
+    Traite la demande de prédiction :
+    1. Prépare les données pour le modèle (DataFrame).
+    2. Lance la prédiction.
+    3. Enregistre la trace dans PostgreSQL.
+    4. Retourne le résultat.
     """
     if model is None:
-        raise HTTPException(status_code=500, detail="Modèle non chargé.")
+        raise HTTPException(
+            status_code=500, detail="Le modèle n'est pas chargé sur le serveur."
+        )
 
     try:
-        # 1. Préparation des données pour le modèle
-        input_data = data.model_dump()
-        df = pd.DataFrame([input_data])
+        # 1. Conversion des données Pydantic en DataFrame Pandas
+        # L'ordre des colonnes est CRUCIAL pour scikit-learn
+        data_dict = input_data.model_dump()
+        df = pd.DataFrame([data_dict])
 
-        # Renommage pour coller au modèle
-        rename_dict = {
+        # On renomme les colonnes pour correspondre exactement à celles attendues par le modèle
+        rename_mapping = {
+            "statut_marital_marie": "statut_marital_Marié(e)",
             "departement_consulting": "departement_Consulting",
             "poste_consultant": "poste_Consultant",
-            "statut_marital_marie": "statut_marital_Marié(e)",
         }
-        df = df.rename(columns=rename_dict)
+        df = df.rename(columns=rename_mapping)
 
-        # Réorganisation des colonnes
+        # On s'assure de l'ordre exact des colonnes
         expected_columns = [
             "ratio_surcharge_anciennete",
             "nombre_participation_pee",
@@ -100,6 +193,12 @@ def predict(data: InputData, db: Session = Depends(get_db)):
             "satisfaction_globale_moyenne",
             "satisfaction_employee_nature_travail",
         ]
+        
+        # Vérification simple pour éviter les erreurs de colonnes manquantes
+        missing_cols = [col for col in expected_columns if col not in df.columns]
+        if missing_cols:
+            raise HTTPException(status_code=500, detail=f"Colonnes manquantes: {missing_cols}")
+            
         df = df[expected_columns]
 
         # 2. Prédiction
@@ -112,7 +211,7 @@ def predict(data: InputData, db: Session = Depends(get_db)):
         # On stocke les inputs bruts au format JSON pour la traçabilité
         log_entry = PredictionLog(
             timestamp=datetime.datetime.now(),
-            inputs=input_data,  # SQLAlchemy convertira auto le dict en JSON
+            inputs=data_dict,  # On sauvegarde le dict original (plus propre)
             prediction=prediction_val,
             probability=proba_val,
         )
@@ -131,8 +230,12 @@ def predict(data: InputData, db: Session = Depends(get_db)):
         }
 
     except Exception as e:
-        print(f"Erreur : {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        print(f"❌ Erreur lors de la prédiction : {e}")
+        # On rollback en cas d'erreur DB pour ne pas bloquer la session
+        db.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"Erreur interne lors de la prédiction : {str(e)}"
+        )
 
 
 if __name__ == "__main__":
