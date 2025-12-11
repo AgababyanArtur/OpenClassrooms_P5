@@ -149,7 +149,9 @@ def home():
                 }
             },
         },
-        422: {"description": "Erreur de validation (données manquantes ou incorrectes)."},
+        422: {
+            "description": "Erreur de validation (données manquantes ou incorrectes)."
+        },
         500: {"description": "Erreur interne (modèle non chargé ou erreur BDD)."},
     },
 )
@@ -193,12 +195,14 @@ def predict(input_data: InputData, db: Session = Depends(get_db)):
             "satisfaction_globale_moyenne",
             "satisfaction_employee_nature_travail",
         ]
-        
+
         # Vérification simple pour éviter les erreurs de colonnes manquantes
         missing_cols = [col for col in expected_columns if col not in df.columns]
         if missing_cols:
-            raise HTTPException(status_code=500, detail=f"Colonnes manquantes: {missing_cols}")
-            
+            raise HTTPException(
+                status_code=500, detail=f"Colonnes manquantes: {missing_cols}"
+            )
+
         df = df[expected_columns]
 
         # 2. Prédiction
