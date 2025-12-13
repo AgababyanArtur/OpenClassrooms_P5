@@ -27,3 +27,4 @@ model/mon_modele.joblib
 *.csv
 *.xlsxhtmlcov/
 .coverage
+.env
