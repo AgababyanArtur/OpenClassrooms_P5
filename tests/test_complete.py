@@ -160,3 +160,18 @@ def test_prediction_error_handling():
         # On accepte 400 ou 500 selon la gestion d'erreur dans app.py
         assert response.status_code in [400, 500]
         assert "detail" in response.json()
+
+def test_predict_method_not_allowed():
+    """
+    Vérifie que l'API renvoie une erreur 405 (Method Not Allowed)
+    si on tente une requête GET sur l'endpoint /predict qui n'accepte que POST.
+    """
+    # Action : On tente un GET au lieu d'un POST
+    response = client.get("/predict")
+    
+    # Vérification : Doit être 405
+    assert response.status_code == 405
+    
+    # Vérification optionnelle : Le message détaille souvent les méthodes autorisées
+    # (FastAPI gère cela automatiquement)
+    assert "detail" in response.json()
