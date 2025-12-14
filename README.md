@@ -1,4 +1,3 @@
-:README.md
 ---
 title: Projet 5 Churn Prediction
 emoji: 🔮
@@ -8,6 +7,8 @@ sdk: docker
 app_port: 7860
 pinned: false
 ---
+
+:README.md
 
 # 🔮 Projet 5 : API de Prédiction de Churn Employé
 
