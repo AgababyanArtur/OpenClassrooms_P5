@@ -2,7 +2,7 @@ import uvicorn
 import pandas as pd
 import joblib
 from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.orm import Session
 import datetime
 
@@ -13,7 +13,6 @@ from database import SessionLocal, PredictionLog
 # 1. Configuration et Chargement
 # ==========================================
 
-# Description riche pour la documentation (Markdown supporté)
 description = """
 API de prédiction de churn (départ) des employés. 🚀
 
@@ -66,49 +65,9 @@ class InputData(BaseModel):
     """
     Modèle de données d'entrée avec validation et documentation intégrée.
     """
-
-    ratio_surcharge_anciennete: float = Field(
-        ...,
-        description="Ratio calculé entre la charge de travail et l'ancienneté.",
-        example=0.14,
-    )
-    nombre_participation_pee: int = Field(
-        ..., description="Nombre de fois où l'employé a participé au PEE.", example=0
-    )
-    departement_consulting: float = Field(
-        ...,
-        description="Indicateur binaire (1.0 = Consulting, 0.0 = Autre).",
-        example=0.0,
-    )
-    age: int = Field(
-        ..., description="Âge de l'employé en années.", ge=18, le=100, example=41
-    )
-    poste_consultant: float = Field(
-        ...,
-        description="Indicateur binaire du poste (1.0 = Consultant).",
-        example=0.0,
-    )
-    tension_salaire: float = Field(
-        ..., description="Score de tension salariale (écart marché).", example=0.0003
-    )
-    statut_marital_marie: float = Field(
-        ...,
-        description="Statut marital (1.0 = Marié, 0.0 = Autre).",
-        example=0.0,
-    )
-    annees_dans_l_entreprise: int = Field(
-        ..., description="Nombre d'années d'ancienneté.", ge=0, example=2
-    )
-    satisfaction_globale_moyenne: float = Field(
-        ..., description="Note moyenne de satisfaction (sur 5 ou 10).", example=2.0
-    )
-    satisfaction_employee_nature_travail: int = Field(
-        ..., description="Note de satisfaction sur la nature du travail.", example=1
-    )
-
-    # Exemple complet visible dans Swagger UI
-    class Config:
-        json_schema_extra = {
+    # Configuration Pydantic V2 (Remplacement de class Config)
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "ratio_surcharge_anciennete": 0.14,
                 "nombre_participation_pee": 0,
@@ -122,6 +81,61 @@ class InputData(BaseModel):
                 "satisfaction_employee_nature_travail": 1,
             }
         }
+    )
+
+    # Pour chaque champ, on remplace example=... par json_schema_extra={"example": ...}
+    ratio_surcharge_anciennete: float = Field(
+        ...,
+        description="Ratio calculé entre la charge de travail et l'ancienneté.",
+        json_schema_extra={"example": 0.14},
+    )
+    nombre_participation_pee: int = Field(
+        ..., 
+        description="Nombre de fois où l'employé a participé au PEE.", 
+        json_schema_extra={"example": 0}
+    )
+    departement_consulting: float = Field(
+        ...,
+        description="Indicateur binaire (1.0 = Consulting, 0.0 = Autre).",
+        json_schema_extra={"example": 0.0}
+    )
+    age: int = Field(
+        ..., 
+        description="Âge de l'employé en années.", 
+        ge=18, le=100, 
+        json_schema_extra={"example": 41}
+    )
+    poste_consultant: float = Field(
+        ...,
+        description="Indicateur binaire du poste (1.0 = Consultant).",
+        json_schema_extra={"example": 0.0}
+    )
+    tension_salaire: float = Field(
+        ..., 
+        description="Score de tension salariale (écart marché).", 
+        json_schema_extra={"example": 0.0003}
+    )
+    statut_marital_marie: float = Field(
+        ...,
+        description="Statut marital (1.0 = Marié, 0.0 = Autre).",
+        json_schema_extra={"example": 0.0}
+    )
+    annees_dans_l_entreprise: int = Field(
+        ..., 
+        description="Nombre d'années d'ancienneté.", 
+        ge=0, 
+        json_schema_extra={"example": 2}
+    )
+    satisfaction_globale_moyenne: float = Field(
+        ..., 
+        description="Note moyenne de satisfaction (sur 5 ou 10).", 
+        json_schema_extra={"example": 2.0}
+    )
+    satisfaction_employee_nature_travail: int = Field(
+        ..., 
+        description="Note de satisfaction sur la nature du travail.", 
+        json_schema_extra={"example": 1}
+    )
 
 
 # ==========================================
@@ -149,9 +163,7 @@ def home():
                 }
             },
         },
-        422: {
-            "description": "Erreur de validation (données manquantes ou incorrectes)."
-        },
+        422: {"description": "Erreur de validation (données manquantes ou incorrectes)."},
         500: {"description": "Erreur interne (modèle non chargé ou erreur BDD)."},
     },
 )
@@ -195,14 +207,12 @@ def predict(input_data: InputData, db: Session = Depends(get_db)):
             "satisfaction_globale_moyenne",
             "satisfaction_employee_nature_travail",
         ]
-
+        
         # Vérification simple pour éviter les erreurs de colonnes manquantes
         missing_cols = [col for col in expected_columns if col not in df.columns]
         if missing_cols:
-            raise HTTPException(
-                status_code=500, detail=f"Colonnes manquantes: {missing_cols}"
-            )
-
+            raise HTTPException(status_code=500, detail=f"Colonnes manquantes: {missing_cols}")
+            
         df = df[expected_columns]
 
         # 2. Prédiction
@@ -244,3 +254,4 @@ def predict(input_data: InputData, db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    
