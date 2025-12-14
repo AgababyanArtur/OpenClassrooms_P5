@@ -21,19 +21,29 @@ Il permet aux équipes RH d'anticiper les départs grâce à une API REST exposa
 L'architecture respecte les principes DevOps/MLOps :
 
 * API : FastAPI (rapide et typé).
+
 * Database : PostgreSQL pour l'historisation des prédictions (Traçabilité).
+
 * Qualité : Tests unitaires (pytest), Linting (Ruff), Formatage (Black).
+
 * CI/CD : Pipeline GitHub Actions automatisé.
+
 * Déploiement : Conteneurisation Docker sur Hugging Face Spaces.
 
 ## 🏗️ Architecture Technique
 
-* Le projet est structuré comme suit :
+Le projet est structuré comme suit :
+
 * app.py : Point d'entrée de l'API FastAPI.
+
 * model/ : Contient le modèle entraîné (.joblib).
+
 * tests/ : Suite de tests unitaires et fonctionnels.
+
 * database.py : Gestion de la connexion BDD (SQLAlchemy).
+
 * create_tables.py / init_db.py : Scripts d'initialisation de la base de données.
+
 * .github/workflows/ : Pipeline CI/CD.
 
 ## 📊 Gestion des Données & Monitoring
@@ -61,35 +71,35 @@ Pour assurer la fiabilité du modèle dans le temps, une architecture de donnée
     * Git
 
 **1. Clonage du projet**
-```bash
-git clone [https://github.com/AgababyanArtur/OpenClassrooms_P5.git](https://github.com/AgababyanArtur/OpenClassrooms_P5.git)
-cd OpenClassrooms_P5
-```
+    ```bash
+    git clone [https://github.com/AgababyanArtur/OpenClassrooms_P5.git](https://github.com/AgababyanArtur/OpenClassrooms_P5.git)
+    cd OpenClassrooms_P5
+    ```
 
 **2. Installation (Local)**
 
-Nous recommandons l'utilisation de uv pour la rapidité, ou pip.
-```bash
-# Avec pip
-pip install .
+    Nous recommandons l'utilisation de uv pour la rapidité, ou pip.
+    ```bash
+    # Avec pip
+    pip install .
 
-# Avec uv (recommandé)
-uv pip install --system .
-```
+    # Avec uv (recommandé)
+    uv pip install --system .
+    ```
 
 **3. Configuration**
 
-Créez un fichier .env à la racine pour configurer la base de données :
-```bash
-DATABASE_URL=postgresql://user:password@localhost/dbname
-```
+    Créez un fichier .env à la racine pour configurer la base de données :
+    ```bash
+    DATABASE_URL=postgresql://user:password@localhost/dbname
+    ```
 
-*Note : Pour les tests unitaires, une base SQLite en mémoire est utilisée automatiquement, aucune configuration n'est requise.*
+    *Note : Pour les tests unitaires, une base SQLite en mémoire est utilisée automatiquement, aucune configuration n'est requise.*
 
 **4. Lancement de l'API**
-```bash
-uvicorn app:app --reload
-```
+    ```bash
+    uvicorn app:app --reload
+    ```
 
 L'API sera accessible sur ```url http://127.0.0.1:8000```.
 
@@ -120,6 +130,7 @@ uv run pytest --cov=app tests/
 ## 📚 Documentation API
 
 La documentation interactive (Swagger UI) est générée automatiquement par FastAPI.
+
 Une fois l'API lancée, visitez :
 
 * Swagger : ```url http://127.0.0.1:8000/docs``` 
