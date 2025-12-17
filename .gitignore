@@ -21,7 +21,7 @@ __pycache__/
 # GitHub refuse les fichiers > 100 Mo.
 # Si ton modèle est petit (<100 Mo) et que tu VEUX l'envoyer,
 # mets un # devant la ligne suivante :
-model/mon_modele.joblib
+# model/mon_modele.joblib
 
 # On ignore les données brutes (confidentialité + poids)
 *.csv
