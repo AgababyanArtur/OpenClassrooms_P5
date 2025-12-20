@@ -9,6 +9,11 @@ import datetime
 # Imports de ta base de données
 from database import SessionLocal, PredictionLog
 
+from pathlib import Path
+import os
+
+
+
 # ==========================================
 # 1. Configuration et Chargement
 # ==========================================
@@ -38,7 +43,15 @@ app = FastAPI(
     },
 )
 
-MODEL_PATH = "model/mon_modele.joblib"
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_PATH = BASE_DIR / "model" / "mon_modele.joblib"
+
+print("CWD:", os.getcwd())
+print("BASE_DIR:", BASE_DIR)
+print("MODEL_PATH:", MODEL_PATH)
+print("MODEL_EXISTS:", MODEL_PATH.exists())
+
+# MODEL_PATH = "model/mon_modele.joblib"
 
 try:
     model = joblib.load(MODEL_PATH)
