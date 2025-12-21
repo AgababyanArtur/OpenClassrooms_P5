@@ -8,20 +8,35 @@ from dotenv import load_dotenv
 # 1. Configuration de la connexion
 # ==========================================
 
-# Charge les variables contenues dans le fichier .env
+# Charge les variables locales (.env) si elles existent (Dev local)
 load_dotenv()
 
 # Récupère l'URL depuis l'environnement
-# Si la variable n'existe pas (ex: oubli), ça renvoie None ou une valeur par défaut
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 
+# --- MODIFICATION POUR HUGGING FACE ---
 if not SQLALCHEMY_DATABASE_URL:
-    raise ValueError(
-        "❌ ERREUR CRITIQUE : La variable DATABASE_URL est introuvable. Vérifie ton fichier .env !"
-    )
+    # Au lieu de lever une erreur, on bascule sur une base SQLite locale
+    # Cela permet à l'app de démarrer sur Hugging Face sans configuration complexe
+    print("⚠️ WARNING: Variable DATABASE_URL introuvable.")
+    print("🔄 Basculement automatique sur SQLite local (demo.db).")
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./demo.db"
 
-# Création du moteur (le "cerveau" de la connexion)
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+    # SQLite nécessite un argument spécifique pour les threads
+    connect_args = {"check_same_thread": False}
+else:
+    print("✅ Connexion BDD détectée.")
+    connect_args = {}
+
+# Création du moteur
+if "sqlite" in SQLALCHEMY_DATABASE_URL:
+    # Configuration spécifique SQLite
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    )
+else:
+    # Configuration standard PostgreSQL
+    engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 # Création de la session (l'usine à transactions)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -42,8 +57,6 @@ class EmployeeHistory(Base):
     __tablename__ = "employees_history"
 
     id = Column(Integer, primary_key=True, index=True)
-
-    # Tes 10 features
     ratio_surcharge_anciennete = Column(Float)
     nombre_participation_pee = Column(Integer)
     departement_consulting = Column(Float)
@@ -54,8 +67,6 @@ class EmployeeHistory(Base):
     annees_dans_l_entreprise = Column(Integer)
     satisfaction_globale_moyenne = Column(Float)
     satisfaction_employee_nature_travail = Column(Integer)
-
-    # La cible (Target) - Peut être null si on insère des données sans connaître le résultat
     target_churn = Column(Integer, nullable=True)
 
 
@@ -67,30 +78,26 @@ class PredictionLog(Base):
     __tablename__ = "prediction_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-
-    # Date et heure de la requête (automatique)
     timestamp = Column(DateTime, default=datetime.datetime.now)
-
-    # On stocke l'ensemble des inputs (features) au format JSON pour la flexibilité
     inputs = Column(JSON)
-
-    # Le résultat du modèle
     prediction = Column(Integer)
     probability = Column(Float)
 
 
 # ==========================================
-# 3. Utilitaire de Session
+# 3. Utilitaire de Session & Init
 # ==========================================
 
 
 def get_db():
-    """
-    Fonction utilitaire pour récupérer une session de base de données,
-    et la fermer automatiquement après utilisation.
-    """
+    """Recupère une session BDD."""
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+
+# IMPORTANT : Création automatique des tables si elles n'existent pas
+# Cela garantit que la base SQLite locale est prête à l'emploi
+Base.metadata.create_all(bind=engine)
