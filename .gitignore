@@ -4,6 +4,10 @@
 venv/
 env/
 
+# Ignorer l'image du schéma UML
+schema_uml.png
+git rm --cached schema_uml.png
+
 # --- Cache Python (Les "miettes" laissées par Python) ---
 # Ce sont des fichiers compilés inutiles qui se recréent tout seuls
 __pycache__/
