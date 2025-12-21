@@ -21,19 +21,18 @@ if not SQLALCHEMY_DATABASE_URL:
     print("⚠️ WARNING: Variable DATABASE_URL introuvable.")
     print("🔄 Basculement automatique sur SQLite local (demo.db).")
     SQLALCHEMY_DATABASE_URL = "sqlite:///./demo.db"
-    
+
     # SQLite nécessite un argument spécifique pour les threads
     connect_args = {"check_same_thread": False}
 else:
-    print(f"✅ Connexion BDD détectée.")
+    print("✅ Connexion BDD détectée.")
     connect_args = {}
 
 # Création du moteur
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     # Configuration spécifique SQLite
     engine = create_engine(
-        SQLALCHEMY_DATABASE_URL, 
-        connect_args={"check_same_thread": False}
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
     )
 else:
     # Configuration standard PostgreSQL
@@ -49,10 +48,12 @@ Base = declarative_base()
 # 2. Définition des Tables (Modèles)
 # ==========================================
 
+
 class EmployeeHistory(Base):
     """
     Table pour stocker le dataset d'entraînement (données historiques).
     """
+
     __tablename__ = "employees_history"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -73,6 +74,7 @@ class PredictionLog(Base):
     """
     Table pour tracer toutes les prédictions faites par l'API.
     """
+
     __tablename__ = "prediction_logs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -86,6 +88,7 @@ class PredictionLog(Base):
 # 3. Utilitaire de Session & Init
 # ==========================================
 
+
 def get_db():
     """Recupère une session BDD."""
     db = SessionLocal()
@@ -93,6 +96,7 @@ def get_db():
         yield db
     finally:
         db.close()
+
 
 # IMPORTANT : Création automatique des tables si elles n'existent pas
 # Cela garantit que la base SQLite locale est prête à l'emploi
