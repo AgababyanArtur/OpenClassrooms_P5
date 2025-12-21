@@ -64,7 +64,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Important pour l'historique git
-          lfs: true      # On récupère aussi le modèle pour l'envoyer sur HF
 
       - name: Push to Hugging Face Space
         env:
