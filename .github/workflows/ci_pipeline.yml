@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 1. Installation de l'outil Xet
+      # 1. Installation de Xet
       - name: Install git-xet extension
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/huggingface/xet-core/refs/heads/main/git_xet/install.sh | sudo sh
@@ -39,9 +39,10 @@ jobs:
           uv pip install --system .
           uv pip install --system ruff black pytest httpx
 
-      # 2. Récupération des vrais fichiers
-      - name: Pull Xet files for tests
-        run: git xet checkout
+      # 2. Récupération des vrais fichiers (CORRECTION ICI)
+      # On utilise la commande standard Git qui va déclencher le filtre Xet
+      - name: Materialize Xet files
+        run: git checkout .
 
       - name: Check formatting with Black
         run: black --check .
@@ -67,7 +68,7 @@ jobs:
         with:
           fetch-depth: 0
       
-      # Installation de Xet pour le déploiement aussi
+      # Installation de Xet pour le déploiement
       - name: Install git-xet extension
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/huggingface/xet-core/refs/heads/main/git_xet/install.sh | sudo sh
@@ -82,7 +83,12 @@ jobs:
           git config --global user.email "bot@github.com"
           git config --global user.name "GitHub Actions"
           
+          # On ajoute le remote
           git remote add space https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME
           
-          # Git Xet va automatiquement gérer le transfert du binaire
+          # IMPORTANT : On checkout aussi ici pour être sûr que Git a les bons pointeurs/fichiers avant le push
+          git checkout .
+          
+          # Le push va utiliser le "transfer agent" de Xet automatiquement
           git push --force space main
+          
