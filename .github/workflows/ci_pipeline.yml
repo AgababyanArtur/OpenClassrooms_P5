@@ -16,15 +16,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Note : On retire "lfs: true" car on utilise Xet
 
-      # --- NOUVEAU : Installation de git-xet ---
+      # 1. Installation de l'outil Xet
       - name: Install git-xet extension
         run: |
-          # Téléchargement et installation de l'outil officiel Hugging Face Xet
           curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/huggingface/xet-core/refs/heads/main/git_xet/install.sh | sudo sh
-          
-          # Configuration globale de git pour utiliser Xet
           git xet install
 
       - name: Install uv
@@ -43,9 +39,9 @@ jobs:
           uv pip install --system .
           uv pip install --system ruff black pytest httpx
 
-      # On force la "matérialisation" des fichiers Xet (téléchargement du vrai contenu) pour les tests
-      - name: Pull Xet files
-        run: git checkout .
+      # 2. Récupération des vrais fichiers
+      - name: Pull Xet files for tests
+        run: git xet checkout
 
       - name: Check formatting with Black
         run: black --check .
@@ -71,7 +67,7 @@ jobs:
         with:
           fetch-depth: 0
       
-      # --- NOUVEAU : Installation de git-xet pour le déploiement ---
+      # Installation de Xet pour le déploiement aussi
       - name: Install git-xet extension
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/huggingface/xet-core/refs/heads/main/git_xet/install.sh | sudo sh
@@ -83,12 +79,10 @@ jobs:
           HF_USERNAME: "ArturAgababyanML"
           HF_SPACE_NAME: "projet5"
         run: |
-          echo "Initialisation de git pour le déploiement..."
           git config --global user.email "bot@github.com"
           git config --global user.name "GitHub Actions"
           
-          # Ajout du remote Hugging Face
           git remote add space https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME
           
-          # Push vers le Space (git-xet s'occupera du transfert des gros fichiers)
+          # Git Xet va automatiquement gérer le transfert du binaire
           git push --force space main
