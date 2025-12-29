@@ -1,6 +1,5 @@
 import uvicorn
 import pandas as pd
-import joblib
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -9,12 +8,11 @@ import datetime
 # Imports de ta base de données
 from database import SessionLocal, PredictionLog
 
-from pathlib import Path
-import os
-
+# --- NOUVEL IMPORT : On récupère le modèle depuis son module dédié ---
+from app.models.ml_model import ml_model
 
 # ==========================================
-# 1. Configuration et Chargement
+# 1. Configuration de l'API
 # ==========================================
 
 # Description riche pour la documentation (Markdown supporté)
@@ -41,24 +39,6 @@ app = FastAPI(
         "url": "https://github.com/AgababyanArtur/OpenClassrooms_P5",
     },
 )
-
-BASE_DIR = Path(__file__).resolve().parent
-MODEL_PATH = BASE_DIR / "model" / "mon_modele.joblib"
-
-print("CWD:", os.getcwd())
-print("BASE_DIR:", BASE_DIR)
-print("MODEL_PATH:", MODEL_PATH)
-print("MODEL_EXISTS:", MODEL_PATH.exists())
-
-# MODEL_PATH = "model/mon_modele.joblib"
-
-try:
-    model = joblib.load(MODEL_PATH)
-    print(f"✅ Modèle chargé avec succès depuis {MODEL_PATH}")
-except Exception as e:
-    print(f"❌ ERREUR : Impossible de charger le modèle : {e}")
-    model = None
-
 
 # Dépendance pour récupérer une session de base de données à chaque requête
 def get_db():
@@ -137,7 +117,7 @@ class InputData(BaseModel):
 
 
 # ==========================================
-# 3. Route de Prédiction
+# 3. Routes de l'API
 # ==========================================
 
 
@@ -171,18 +151,18 @@ def predict(input_data: InputData, db: Session = Depends(get_db)):
     """
     Traite la demande de prédiction :
     1. Prépare les données pour le modèle (DataFrame).
-    2. Lance la prédiction.
+    2. Lance la prédiction via le module importé.
     3. Enregistre la trace dans PostgreSQL.
     4. Retourne le résultat.
     """
-    if model is None:
+    # Vérification que le modèle a bien été chargé par le module ml_model
+    if ml_model is None:
         raise HTTPException(
             status_code=500, detail="Le modèle n'est pas chargé sur le serveur."
         )
 
     try:
         # 1. Conversion des données Pydantic en DataFrame Pandas
-        # L'ordre des colonnes est CRUCIAL pour scikit-learn
         data_dict = input_data.model_dump()
         df = pd.DataFrame([data_dict])
 
@@ -217,24 +197,23 @@ def predict(input_data: InputData, db: Session = Depends(get_db)):
 
         df = df[expected_columns]
 
-        # 2. Prédiction
-        prediction_val = int(model.predict(df)[0])
+        # 2. Prédiction (Utilisation de ml_model importé)
+        prediction_val = int(ml_model.predict(df)[0])
         proba_val = None
-        if hasattr(model, "predict_proba"):
-            proba_val = float(model.predict_proba(df)[0][1])
+        if hasattr(ml_model, "predict_proba"):
+            proba_val = float(ml_model.predict_proba(df)[0][1])
 
         # 3. 💾 ENREGISTREMENT DANS LA BASE DE DONNÉES (LOGGING)
-        # On stocke les inputs bruts au format JSON pour la traçabilité
         log_entry = PredictionLog(
             timestamp=datetime.datetime.now(),
-            inputs=data_dict,  # On sauvegarde le dict original (plus propre)
+            inputs=data_dict,
             prediction=prediction_val,
             probability=proba_val,
         )
 
         db.add(log_entry)
-        db.commit()  # On valide l'enregistrement
-        db.refresh(log_entry)  # On récupère l'ID généré
+        db.commit()
+        db.refresh(log_entry)
 
         print(f"📝 Log enregistré en BDD avec l'ID : {log_entry.id}")
 
@@ -242,12 +221,11 @@ def predict(input_data: InputData, db: Session = Depends(get_db)):
         return {
             "prediction": prediction_val,
             "probability": proba_val,
-            "log_id": log_entry.id,  # On renvoie l'ID du log pour preuve
+            "log_id": log_entry.id,
         }
 
     except Exception as e:
         print(f"❌ Erreur lors de la prédiction : {e}")
-        # On rollback en cas d'erreur DB pour ne pas bloquer la session
         db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Erreur interne lors de la prédiction : {str(e)}"
@@ -255,4 +233,4 @@ def predict(input_data: InputData, db: Session = Depends(get_db)):
 
 
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

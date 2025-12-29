@@ -10,13 +10,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && git lfs install
 
-# 2. Récupération de uv
+# 2. Récupération de uv (gestionnaire de paquets ultra-rapide)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # 3. Copie du projet
-# Note : Sur Hugging Face Spaces, le contexte de build contient déjà les fichiers LFS téléchargés
-# SI et SEULEMENT SI le repo a été cloné correctement.
-# Mais pour être sûr, on copie tout.
+# Note : Sur Hugging Face Spaces, les fichiers LFS peuvent déjà être présents,
+# mais COPY . . assure que tout le code (y compris main.py et le dossier app/) est bien là.
 COPY . .
 
 # 4. Installation des dépendances
@@ -31,4 +30,7 @@ ENV PATH="/home/user/.local/bin:$PATH"
 
 # 6. Port et Lancement
 EXPOSE 7860
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+
+# --- MODIFICATION ICI ---
+# On lance 'main:app' car le fichier s'appelle désormais main.py
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
