@@ -1,6 +1,5 @@
 import pickle
 from pathlib import Path
-import os
 
 # Définition du chemin (attention à l'extension .pkl)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -17,4 +16,3 @@ try:
 except Exception as e:
     print(f"❌ ERREUR : Impossible de charger le modèle Pickle : {e}")
     ml_model = None
-    
