@@ -178,4 +178,3 @@ def test_predict_method_not_allowed():
 
     # Vérification optionnelle
     assert "detail" in response.json()
-    

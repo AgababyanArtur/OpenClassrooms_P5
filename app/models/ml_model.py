@@ -1,9 +1,8 @@
 import joblib
 from pathlib import Path
-import os
 
 # Définition des chemins relatifs
-# __file__ est ce fichier (ml_model.py). 
+# __file__ est ce fichier (ml_model.py).
 # On remonte de 3 niveaux : models -> app -> racine
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 MODEL_PATH = BASE_DIR / "model" / "mon_modele.joblib"

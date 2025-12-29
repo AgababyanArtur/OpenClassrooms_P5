@@ -40,6 +40,7 @@ app = FastAPI(
     },
 )
 
+
 # Dépendance pour récupérer une session de base de données à chaque requête
 def get_db():
     db = SessionLocal()
