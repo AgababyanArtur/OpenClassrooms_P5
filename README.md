@@ -32,8 +32,8 @@ L'architecture respecte les principes DevOps/MLOps :
 Le projet est structuré comme suit :
 
 * main.py : Point d'entrée de l'API FastAPI (anciennement app.py).
-* app/models/ : Contient la logique de chargement du modèle et le fichier .joblib (via liens ou chargement).
-* model/ : Stockage physique du modèle entraîné (.joblib).
+* app/models/ : Contient la logique de chargement du modèle et le fichier .pkl (via liens ou chargement).
+* model/ : Stockage physique du modèle entraîné (.pkl).
 * tests/ : Suite de tests unitaires et fonctionnels.
 * database.py : Gestion de la connexion BDD (SQLAlchemy).
 * create_tables.py / init_db.py : Scripts d'initialisation de la base de données.
