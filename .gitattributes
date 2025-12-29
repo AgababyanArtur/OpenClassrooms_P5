@@ -1,5 +1,5 @@
-# On indique à Git d'utiliser le filtre Xet pour les fichiers joblib
-model/mon_modele.joblib filter=xet diff=xet merge=xet -text
+# On indique à Git d'utiliser le filtre Xet pour les fichiers pikle
+model/mon_modele.pkl filter=xet diff=xet merge=xet -text
 
 # (Optionnel) Pour les autres fichiers texte
 * text=auto eol=lf
