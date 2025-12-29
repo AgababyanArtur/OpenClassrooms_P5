@@ -5,8 +5,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from unittest.mock import patch
 
-# Imports depuis tes fichiers principaux
-from app import app, get_db
+# --- MODIFICATION ICI : On importe depuis main, pas app ---
+from main import app, get_db
 from database import Base, PredictionLog
 
 # ==========================================
@@ -70,7 +70,8 @@ def test_prediction_workflow_churn():
         "satisfaction_employee_nature_travail": 0,
     }
 
-    with patch("app.model") as mock_model:
+    # --- MODIFICATION ICI : On patch 'main.ml_model' car c'est le nom dans main.py ---
+    with patch("main.ml_model") as mock_model:
         mock_model.predict.return_value = [1]
         mock_model.predict_proba.return_value = [[0.2, 0.8]]
 
@@ -105,7 +106,8 @@ def test_prediction_workflow_loyal():
         "satisfaction_employee_nature_travail": 4,
     }
 
-    with patch("app.model") as mock_model:
+    # --- MODIFICATION ICI : Patch de main.ml_model ---
+    with patch("main.ml_model") as mock_model:
         mock_model.predict.return_value = [0]
         mock_model.predict_proba.return_value = [[0.9, 0.1]]
 
@@ -151,13 +153,14 @@ def test_prediction_error_handling():
         "satisfaction_employee_nature_travail": 0,
     }
 
-    with patch("app.model") as mock_model:
+    # --- MODIFICATION ICI : Patch de main.ml_model ---
+    with patch("main.ml_model") as mock_model:
         # On force le modèle à planter
         mock_model.predict.side_effect = Exception("Boom! Modèle cassé")
 
         response = client.post("/predict", json=payload)
 
-        # On accepte 400 ou 500 selon la gestion d'erreur dans app.py
+        # On accepte 400 ou 500 selon la gestion d'erreur dans main.py
         assert response.status_code in [400, 500]
         assert "detail" in response.json()
 
@@ -173,6 +176,5 @@ def test_predict_method_not_allowed():
     # Vérification : Doit être 405
     assert response.status_code == 405
 
-    # Vérification optionnelle : Le message détaille souvent les méthodes autorisées
-    # (FastAPI gère cela automatiquement)
+    # Vérification optionnelle
     assert "detail" in response.json()
