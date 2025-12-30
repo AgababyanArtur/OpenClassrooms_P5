@@ -15,8 +15,8 @@ if not MODEL_PATH.exists():
 else:
     try:
         # On charge le modèle dans la variable 'ml_model' qui sera exportée
-        ml_model = pickle.load(MODEL_PATH)
+        with open(MODEL_PATH, "rb") as f:
+            ml_model = pickle.load(MODEL_PATH)
         print("✅ Modèle chargé avec succès dans le module app.models.ml_model")
     except Exception as e:
-        print(f"❌ ERREUR : Impossible de charger le modèle : {e}")
-        ml_model = None
+        print(f"❌ Erreur : {e}")
