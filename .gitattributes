@@ -1,0 +1,2 @@
+# On indique à Git d'utiliser le filtre Xet pour les fichiers .pkl
+model/mon_modele.pkl filter=xet diff=xet merge=xet -text

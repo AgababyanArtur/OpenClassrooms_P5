@@ -1,0 +1,23 @@
+# --- Environnement Virtuel ---
+.venv/
+venv/
+env/
+
+# --- Cache Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# --- Configuration IDE ---
+.vscode/
+.idea/
+.DS_Store
+
+# --- Données et Modèles ---
+# On ignore les données brutes (confidentialité + poids)
+*.csv
+*.xlsx
+htmlcov/
+.coverage
+.env
