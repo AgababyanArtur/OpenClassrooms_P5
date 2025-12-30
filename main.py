@@ -29,6 +29,7 @@ app = FastAPI(
     version="2.1.0",
 )
 
+
 # Dépendance pour la base de données
 def get_db():
     db = SessionLocal()
@@ -37,13 +38,15 @@ def get_db():
     finally:
         db.close()
 
+
 # ==========================================
 # 2. Schéma de Données (Pydantic V2)
 # ==========================================
 
+
 class InputData(BaseModel):
     """Schéma des caractéristiques employé attendues par le modèle."""
-    
+
     # Utilisation de json_schema_extra pour éviter les deprecation warnings
     ratio_surcharge_anciennete: float = Field(..., json_schema_extra={"example": 0.14})
     nombre_participation_pee: int = Field(..., json_schema_extra={"example": 0})
@@ -54,7 +57,9 @@ class InputData(BaseModel):
     statut_marital_marie: float = Field(..., json_schema_extra={"example": 0.0})
     annees_dans_l_entreprise: int = Field(..., ge=0, json_schema_extra={"example": 2})
     satisfaction_globale_moyenne: float = Field(..., json_schema_extra={"example": 2.0})
-    satisfaction_employee_nature_travail: int = Field(..., json_schema_extra={"example": 1})
+    satisfaction_employee_nature_travail: int = Field(
+        ..., json_schema_extra={"example": 1}
+    )
 
     # Nouvelle syntaxe Pydantic V2 pour la config
     model_config = ConfigDict(
@@ -74,9 +79,11 @@ class InputData(BaseModel):
         }
     )
 
+
 # ==========================================
 # 3. Routes de l'API
 # ==========================================
+
 
 @app.get("/")
 def home():
@@ -84,13 +91,14 @@ def home():
     return {
         "status": "online",
         "model_loaded": ml_model is not None,
-        "message": "API connectée à PostgreSQL !" # Ajouté pour compatibilité avec certains tests
+        "message": "API connectée à PostgreSQL !",  # Ajouté pour compatibilité avec certains tests
     }
+
 
 @app.post("/predict", tags=["ML Prediction"])
 def predict(input_data: InputData, db: Session = Depends(get_db)):
     """Effectue une prédiction et l'enregistre en BDD."""
-    
+
     # Sécurité : Vérifier que le module a bien chargé le modèle
     if ml_model is None:
         raise HTTPException(
@@ -99,7 +107,7 @@ def predict(input_data: InputData, db: Session = Depends(get_db)):
 
     try:
         # 1. Préparation des données pour le modèle
-        data_dict = input_data.model_dump() # model_dump() remplace dict() en V2
+        data_dict = input_data.model_dump()  # model_dump() remplace dict() en V2
         df = pd.DataFrame([data_dict])
 
         # Mapping des colonnes (doit correspondre à l'entraînement)
@@ -112,11 +120,16 @@ def predict(input_data: InputData, db: Session = Depends(get_db)):
 
         # Ordre strict des colonnes
         expected_columns = [
-            "ratio_surcharge_anciennete", "nombre_participation_pee",
-            "departement_Consulting", "age", "poste_Consultant",
-            "tension_salaire", "statut_marital_Marié(e)",
-            "annees_dans_l_entreprise", "satisfaction_globale_moyenne",
-            "satisfaction_employee_nature_travail"
+            "ratio_surcharge_anciennete",
+            "nombre_participation_pee",
+            "departement_Consulting",
+            "age",
+            "poste_Consultant",
+            "tension_salaire",
+            "statut_marital_Marié(e)",
+            "annees_dans_l_entreprise",
+            "satisfaction_globale_moyenne",
+            "satisfaction_employee_nature_travail",
         ]
         df = df[expected_columns]
 
@@ -140,13 +153,15 @@ def predict(input_data: InputData, db: Session = Depends(get_db)):
         return {
             "prediction": prediction_val,
             "probability": proba_val,
-            "log_id": log_entry.id
+            "log_id": log_entry.id,
         }
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Erreur lors de la prédiction : {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erreur lors de la prédiction : {str(e)}"
+        )
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-    
