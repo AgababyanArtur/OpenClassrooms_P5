@@ -49,10 +49,15 @@ def setup_database():
 
 
 def test_home():
-    """Vérifie que la route racine répond bien 200."""
+    """Vérifie que la route racine répond bien 200 et indique l'état du modèle."""
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "API connectée à PostgreSQL !"}
+    
+    # On vérifie la nouvelle structure de réponse
+    data = response.json()
+    assert "status" in data
+    assert data["status"] == "online"
+    assert "model_loaded" in data
 
 
 def test_prediction_workflow_churn():
