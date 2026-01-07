@@ -16,7 +16,7 @@ else:
     try:
         # On charge le modèle dans la variable 'ml_model' qui sera exportée
         with open(MODEL_PATH, "rb") as f:
-            ml_model = pickle.load(MODEL_PATH)
+            ml_model = pickle.load(f)
         print("✅ Modèle chargé avec succès dans le module app.models.ml_model")
     except Exception as e:
         print(f"❌ Erreur : {e}")
