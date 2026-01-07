@@ -6,17 +6,20 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 MODEL_PATH = BASE_DIR / "model" / "mon_modele.pkl"
 
-print(f"Chargement du modèle depuis : {MODEL_PATH}")
+print(f"🔍 Recherche du modèle ici : {MODEL_PATH}")
 
 ml_model = None
 
 if not MODEL_PATH.exists():
-    print(f"❌ ERREUR : Le fichier {MODEL_PATH} est introuvable.")
-else:
-    try:
-        # On charge le modèle dans la variable 'ml_model' qui sera exportée
-        with open(MODEL_PATH, "rb") as f:
-            ml_model = pickle.load(f)
-        print("✅ Modèle chargé avec succès dans le module app.models.ml_model")
-    except Exception as e:
-        print(f"❌ Erreur : {e}")
+    # 🛑 STOP : On arrête tout si le fichier n'est pas là.
+    # Cela fera échouer le déploiement Hugging Face avec une erreur claire.
+    raise FileNotFoundError(
+        f"🚨 CRITIQUE : Le fichier modèle est introuvable : {MODEL_PATH}"
+    )
+
+try:
+    with open(MODEL_PATH, "rb") as f:
+        ml_model = pickle.load(f)
+    print("✅ Modèle chargé avec succès !")
+except Exception as e:
+    raise RuntimeError(f"🚨 CRITIQUE : Impossible de lire le fichier pickle : {e}")
