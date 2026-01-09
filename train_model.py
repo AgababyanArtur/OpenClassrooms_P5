@@ -47,9 +47,7 @@ def train():
     # Vérification des colonnes manquantes
     missing_features = [col for col in TARGET_FEATURES if col not in df.columns]
     if missing_features:
-        print(
-            f"❌ ERREUR CRITIQUE : Colonnes features manquantes : {missing_features}"
-        )
+        print(f"❌ ERREUR CRITIQUE : Colonnes features manquantes : {missing_features}")
         sys.exit(1)
 
     if TARGET_COLUMN not in df.columns:
@@ -78,12 +76,15 @@ def train():
     clf = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("classifier", RandomForestClassifier(
-                n_estimators=200,       # Augmenté à 200 arbres
-                max_depth=10,           # Limite la profondeur pour éviter l'overfitting
-                min_samples_split=5,    # Minimum d'échantillons pour diviser un nœud
-                random_state=42         # Toujours fixé pour la reproductibilité
-            )),
+            (
+                "classifier",
+                RandomForestClassifier(
+                    n_estimators=200,  # Augmenté à 200 arbres
+                    max_depth=10,  # Limite la profondeur pour éviter l'overfitting
+                    min_samples_split=5,  # Minimum d'échantillons pour diviser un nœud
+                    random_state=42,  # Toujours fixé pour la reproductibilité
+                ),
+            ),
         ]
     )
 
