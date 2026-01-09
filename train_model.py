@@ -2,8 +2,6 @@ import pandas as pd
 import pickle
 import sys
 from pathlib import Path
-
-# --- MODIFICATION ICI : Import du Random Forest ---
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
@@ -17,26 +15,25 @@ MODEL_DIR = BASE_DIR / "model"
 MODEL_PATH = MODEL_DIR / "mon_modele.pkl"
 
 # 1. Liste des colonnes EXACTES présentes dans ton CSV final_data_set.csv
-# Ce sont les features que le modèle va utiliser pour apprendre.
 TARGET_FEATURES = [
     "ratio_surcharge_anciennete",
     "nombre_participation_pee",
-    "departement_Consulting",  # Déjà présent dans le CSV
+    "departement_Consulting",
     "age",
-    "poste_Consultant",  # Déjà présent dans le CSV
+    "poste_Consultant",
     "tension_salaire",
-    "statut_marital_Marié(e)",  # Déjà présent dans le CSV
+    "statut_marital_Marié(e)",
     "annees_dans_l_entreprise",
     "satisfaction_globale_moyenne",
     "satisfaction_employee_nature_travail",
 ]
 
-# 2. Nom de la colonne cible (Target) trouvé dans ton CSV
+# 2. Nom de la colonne cible
 TARGET_COLUMN = "a_quitte_l_entreprise_num"
 
 
 def train():
-    print("🚀 Démarrage du ré-entraînement automatique (Random Forest)...")
+    print("🚀 Démarrage du ré-entraînement (Random Forest Optimisé)...")
     print(f"📂 Dossier de travail : {BASE_DIR}")
 
     # Vérification du fichier
@@ -50,10 +47,7 @@ def train():
     # Vérification des colonnes manquantes
     missing_features = [col for col in TARGET_FEATURES if col not in df.columns]
     if missing_features:
-        print(
-            f"❌ ERREUR CRITIQUE : Colonnes features manquantes dans le CSV : {missing_features}"
-        )
-        print("   Vérifiez que le CSV contient bien les colonnes exactes.")
+        print(f"❌ ERREUR CRITIQUE : Colonnes features manquantes : {missing_features}")
         sys.exit(1)
 
     if TARGET_COLUMN not in df.columns:
@@ -64,11 +58,9 @@ def train():
     X = df[TARGET_FEATURES]
     y = df[TARGET_COLUMN]
 
-    print("⚙️ Entraînement du modèle Random Forest en cours...")
+    print("⚙️ Entraînement avec les meilleurs hyperparamètres...")
 
     # Pipeline
-    # Note : Le StandardScaler n'est pas strictement obligatoire pour les arbres,
-    # mais on le garde ici pour gérer proprement l'imputation et la compatibilité future.
     numeric_transformer = Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="median")),
@@ -80,16 +72,17 @@ def train():
         transformers=[("num", numeric_transformer, TARGET_FEATURES)]
     )
 
-    # --- MODIFICATION ICI : Utilisation de RandomForestClassifier ---
+    # --- MODIFICATION ICI : Insertion de tes hyperparamètres ---
     clf = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
             (
                 "classifier",
                 RandomForestClassifier(
-                    n_estimators=100,  # Nombre d'arbres
-                    random_state=42,  # Pour la reproductibilité
-                    max_depth=None,  # Profondeur max (None = illimité)
+                    n_estimators=200,  # Augmenté à 200 arbres
+                    max_depth=10,  # Limite la profondeur pour éviter l'overfitting
+                    min_samples_split=5,  # Minimum d'échantillons pour diviser un nœud
+                    random_state=42,  # Toujours fixé pour la reproductibilité
                 ),
             ),
         ]
@@ -103,7 +96,7 @@ def train():
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(clf, f)
 
-    print(f"✅ SUCCÈS : Modèle Random Forest régénéré et sauvegardé dans {MODEL_PATH}")
+    print(f"✅ SUCCÈS : Modèle optimisé sauvegardé dans {MODEL_PATH}")
 
 
 if __name__ == "__main__":
