@@ -4,6 +4,9 @@ import datetime
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.orm import Session
+import os
+import joblib
+from train_model import train_and_evaluate  # On importe ta fonction d'entraînement
 
 # Imports de ta base de données
 from database import SessionLocal, PredictionLog
@@ -11,6 +14,17 @@ from database import SessionLocal, PredictionLog
 # --- ARCHITECTURE MODULAIRE ---
 # On importe l'objet modèle déjà chargé depuis son module dédié
 from app.models.ml_model import ml_model
+
+MODEL_PATH = "model/model.pkl"
+
+# Vérification au démarrage de l'API
+if not os.path.exists(MODEL_PATH):
+    print("⚠️ Modèle introuvable. Démarrage de l'entraînement automatique...")
+    train_and_evaluate()
+    print("✅ Entraînement terminé. Chargement de l'API.")
+
+# Ensuite, tu peux charger ton modèle normalement
+model = joblib.load(MODEL_PATH)
 
 # ==========================================
 # 1. Configuration de l'API
