@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.orm import Session
 import os
 import joblib
-from train_model import train_and_evaluate # On importe ta fonction d'entraînement
+from train_model import train_and_evaluate  # On importe ta fonction d'entraînement
 
 # Imports de ta base de données
 from database import SessionLocal, PredictionLog
