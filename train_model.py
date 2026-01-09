@@ -2,7 +2,9 @@ import pandas as pd
 import pickle
 import sys
 from pathlib import Path
-from sklearn.linear_model import LogisticRegression
+
+# --- MODIFICATION ICI : Import du Random Forest ---
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
@@ -34,7 +36,7 @@ TARGET_COLUMN = "a_quitte_l_entreprise_num"
 
 
 def train():
-    print("🚀 Démarrage du ré-entraînement automatique...")
+    print("🚀 Démarrage du ré-entraînement automatique (Random Forest)...")
     print(f"📂 Dossier de travail : {BASE_DIR}")
 
     # Vérification du fichier
@@ -44,10 +46,6 @@ def train():
 
     df = pd.read_csv(DATA_PATH)
     print(f"📊 Données chargées : {df.shape}")
-
-    # --- CORRECTION MAJEURE ---
-    # Ton CSV contient déjà les colonnes "statut_marital_Marié(e)", etc.
-    # On ne fait PAS de renommage ici, on vérifie juste qu'elles sont là.
 
     # Vérification des colonnes manquantes
     missing_features = [col for col in TARGET_FEATURES if col not in df.columns]
@@ -66,9 +64,11 @@ def train():
     X = df[TARGET_FEATURES]
     y = df[TARGET_COLUMN]
 
-    print("⚙️ Entraînement du modèle en cours...")
+    print("⚙️ Entraînement du modèle Random Forest en cours...")
 
     # Pipeline
+    # Note : Le StandardScaler n'est pas strictement obligatoire pour les arbres,
+    # mais on le garde ici pour gérer proprement l'imputation et la compatibilité future.
     numeric_transformer = Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="median")),
@@ -80,10 +80,18 @@ def train():
         transformers=[("num", numeric_transformer, TARGET_FEATURES)]
     )
 
+    # --- MODIFICATION ICI : Utilisation de RandomForestClassifier ---
     clf = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("classifier", LogisticRegression(random_state=42, max_iter=1000)),
+            (
+                "classifier",
+                RandomForestClassifier(
+                    n_estimators=100,  # Nombre d'arbres
+                    random_state=42,  # Pour la reproductibilité
+                    max_depth=None,  # Profondeur max (None = illimité)
+                ),
+            ),
         ]
     )
 
@@ -95,7 +103,7 @@ def train():
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(clf, f)
 
-    print(f"✅ SUCCÈS : Modèle régénéré et sauvegardé dans {MODEL_PATH}")
+    print(f"✅ SUCCÈS : Modèle Random Forest régénéré et sauvegardé dans {MODEL_PATH}")
 
 
 if __name__ == "__main__":
