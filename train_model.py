@@ -1,103 +1,82 @@
 import pandas as pd
-import pickle
-import sys
-from pathlib import Path
+import joblib
+from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import classification_report, accuracy_score
 
-# --- CONFIGURATION ROBUSTE ---
-BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR / "final_data_set.csv"
-MODEL_DIR = BASE_DIR / "model"
-MODEL_PATH = MODEL_DIR / "mon_modele.pkl"
-
-# 1. Liste des colonnes EXACTES présentes dans ton CSV final_data_set.csv
-TARGET_FEATURES = [
-    "ratio_surcharge_anciennete",
-    "nombre_participation_pee",
-    "departement_Consulting",
-    "age",
-    "poste_Consultant",
-    "tension_salaire",
-    "statut_marital_Marié(e)",
-    "annees_dans_l_entreprise",
-    "satisfaction_globale_moyenne",
-    "satisfaction_employee_nature_travail",
-]
-
-# 2. Nom de la colonne cible
+# --- CONFIGURATION ---
+DATA_PATH = "final_data_set.csv"
+MODEL_PATH = "model/model.pkl"  # On garde un nom standard
 TARGET_COLUMN = "a_quitte_l_entreprise_num"
+TEST_SIZE = 0.2
+RANDOM_STATE = 42
 
 
-def train():
-    print("🚀 Démarrage du ré-entraînement (Random Forest Optimisé)...")
-    print(f"📂 Dossier de travail : {BASE_DIR}")
+def train_and_evaluate():
+    print("1. Chargement des données...", flush=True)
+    try:
+        df = pd.read_csv(DATA_PATH)
+    except FileNotFoundError:
+        print(f"ERREUR : Le fichier {DATA_PATH} est introuvable.")
+        return
 
-    # Vérification du fichier
-    if not DATA_PATH.exists():
-        print(f"❌ ERREUR CRITIQUE : Le fichier {DATA_PATH} est introuvable.")
-        sys.exit(1)
+    # --- PRÉTRAITEMENT ---
+    print("2. Prétraitement des données...", flush=True)
 
-    df = pd.read_csv(DATA_PATH)
-    print(f"📊 Données chargées : {df.shape}")
-
-    # Vérification des colonnes manquantes
-    missing_features = [col for col in TARGET_FEATURES if col not in df.columns]
-    if missing_features:
-        print(f"❌ ERREUR CRITIQUE : Colonnes features manquantes : {missing_features}")
-        sys.exit(1)
-
-    if TARGET_COLUMN not in df.columns:
-        print(f"❌ ERREUR CRITIQUE : La colonne cible '{TARGET_COLUMN}' est absente.")
-        sys.exit(1)
-
-    # Sélection des données
-    X = df[TARGET_FEATURES]
+    # Séparation Features (X) et Target (y)
     y = df[TARGET_COLUMN]
+    X = df.drop(TARGET_COLUMN, axis=1)
 
-    print("⚙️ Entraînement avec les meilleurs hyperparamètres...")
+    # Encodage des variables catégorielles
+    for col in X.select_dtypes(include=["object"]).columns:
+        le = LabelEncoder()
+        X[col] = le.fit_transform(X[col])
 
-    # Pipeline
-    numeric_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
-        ]
+    # Encodage de la cible
+    le_target = LabelEncoder()
+    y = le_target.fit_transform(y)
+
+    # --- SPLIT TRAIN / TEST ---
+    print(f"3. Séparation des données (Test size: {TEST_SIZE})...", flush=True)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
     )
 
-    preprocessor = ColumnTransformer(
-        transformers=[("num", numeric_transformer, TARGET_FEATURES)]
+    # --- ENTRAÎNEMENT ---
+    print("4. Entraînement du modèle (Random Forest)...", flush=True)
+    # Hyperparamètres robustes pour commencer
+    model = RandomForestClassifier(
+        n_estimators=200,  # Plus d'arbres pour la stabilité
+        max_depth=15,  # Profondeur contrôlée
+        min_samples_split=5,  # Évite d'apprendre par coeur des cas trop spécifiques
+        class_weight="balanced",  # Gère le déséquilibre (peu de départs vs beaucoup de restes)
+        random_state=RANDOM_STATE,
+        n_jobs=-1,  # Utilise tous les coeurs du processeur
     )
+    model.fit(X_train, y_train)
 
-    # --- MODIFICATION ICI : Insertion de tes hyperparamètres ---
-    clf = Pipeline(
-        steps=[
-            ("preprocessor", preprocessor),
-            (
-                "classifier",
-                RandomForestClassifier(
-                    n_estimators=200,  # Augmenté à 200 arbres
-                    max_depth=10,  # Limite la profondeur pour éviter l'overfitting
-                    min_samples_split=5,  # Minimum d'échantillons pour diviser un nœud
-                    random_state=42,  # Toujours fixé pour la reproductibilité
-                ),
-            ),
-        ]
-    )
+    # --- ÉVALUATION ---
+    print("5. Calcul des métriques...", flush=True)
+    y_pred = model.predict(X_test)
 
-    clf.fit(X, y)
+    acc = accuracy_score(y_test, y_pred)
+    report = classification_report(y_test, y_pred)
 
-    # Sauvegarde
-    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    # Affichage forcé dans la console
+    print("\n" + "=" * 50)
+    print("📊 RÉSULTATS DE PERFORMANCE")
+    print("=" * 50)
+    print(f"✅ Accuracy Globale : {acc:.2%}")
+    print("\n📝 Rapport détaillé :")
+    print(report)
+    print("=" * 50 + "\n")
 
-    with open(MODEL_PATH, "wb") as f:
-        pickle.dump(clf, f)
-
-    print(f"✅ SUCCÈS : Modèle optimisé sauvegardé dans {MODEL_PATH}")
+    # --- SAUVEGARDE ---
+    print(f"6. Sauvegarde du modèle dans {MODEL_PATH}...", flush=True)
+    joblib.dump(model, MODEL_PATH)
+    print("🚀 Terminé ! Le modèle est prêt.")
 
 
 if __name__ == "__main__":
-    train()
+    train_and_evaluate()
