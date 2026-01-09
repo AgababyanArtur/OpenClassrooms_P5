@@ -1,5 +1,5 @@
 import pandas as pd
-import joblib
+import pickle
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
@@ -74,7 +74,8 @@ def train_and_evaluate():
 
     # --- SAUVEGARDE ---
     print(f"6. Sauvegarde du modèle dans {MODEL_PATH}...", flush=True)
-    joblib.dump(model, MODEL_PATH)
+    with open("model/model.pkl", "wb") as f:
+        pickle.dump(model, f)
     print("🚀 Terminé ! Le modèle est prêt.")
 
 
