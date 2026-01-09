@@ -4,7 +4,7 @@ from pathlib import Path
 # Définition des chemins
 # On remonte de : ml_model.py -> models/ -> app/ -> racine
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-MODEL_PATH = BASE_DIR / "model" / "mon_modele.pkl"
+MODEL_PATH = BASE_DIR / "model" / "modele.pkl"
 
 print(f"🔍 Recherche du modèle ici : {MODEL_PATH}")
 
