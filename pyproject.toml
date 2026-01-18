@@ -8,6 +8,7 @@ dependencies = [
     "fastapi>=0.122.0",
     "imbalanced-learn>=0.14.0",
     "ipykernel>=7.1.0",
+    "joblib>=1.5.3",
     "lightgbm>=4.6.0",
     "matplotlib>=3.10.7",
     "numpy>=2.3.5",
