@@ -1,0 +1,75 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  # JOB 1 : Qualité et Tests
+  build-and-test:
+    name: Code Quality & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true  # ✅ CORRECTION : Active la récupération LFS
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-suffix: "python-3.13"
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          uv pip install --system .
+          uv pip install --system ruff black pytest httpx
+
+      - name: Check formatting with Black
+        run: black --check .
+
+      - name: Lint With Ruff
+        run: ruff check .
+
+      - name: Run test with pytest
+        env:
+          DATABASE_URL: "sqlite:///:memory:"
+        run: uv run pytest tests/
+
+  # JOB 2 : Déploiement Continu (CD) vers Hugging Face
+  deploy-to-huggingface:
+    name: Push to Hugging Face Hub
+    needs: [build-and-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true  # ✅ CORRECTION : Active la récupération LFS
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: "ArturAgababyanML"
+          HF_SPACE_NAME: "projet5"
+        run: |
+          git config --global user.email "bot@github.com"
+          git config --global user.name "GitHub Actions"
+          
+          # Ajouter le remote Hugging Face
+          git remote add space https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME
+          
+          # ✅ CORRECTION : Pousser vers Hugging Face avec Git LFS
+          git push --force space main
