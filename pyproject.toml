@@ -1,12 +1,60 @@
 [project]
 name = "openclassrooms-p5"
 version = "0.1.0"
-description = "Add your description here"
+description = "API FastAPI pour la prédiction du churn employé"
+readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
-
-[dependency-groups]
-dev = [
-    "black>=26.1.0",
-    "ruff>=0.14.14",
+dependencies = [
+    "fastapi>=0.115.6",
+    "uvicorn>=0.34.0",
+    "pandas>=2.2.3",
+    "scikit-learn>=1.8.0",
+    "imbalanced-learn>=0.12.4",
+    "sqlalchemy>=2.0.36",
+    "psycopg2-binary>=2.9.10",
+    "pydantic>=2.10.4",
+    "python-dotenv>=1.2.1",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.1",
+    "black>=24.10.0",
+    "ruff>=0.8.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# ==========================================
+# Configuration Hatchling pour structure "flat"
+# ==========================================
+[tool.hatch.build.targets.wheel]
+packages = [
+    "app",
+    "tests"
+]
+
+# Inclure les fichiers Python à la racine
+[tool.hatch.build]
+include = [
+    "*.py",
+    "app/**/*.py",
+    "tests/**/*.py",
+    "model/*.pkl",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
