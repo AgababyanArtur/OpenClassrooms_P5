@@ -1,0 +1,86 @@
+# ============================================
+# Environnements virtuels
+# ============================================
+.venv/
+venv/
+env/
+.env
+.python-env/
+
+# ============================================
+# Cache Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ============================================
+# IDE et éditeurs
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Bases de données locales (SQLite)
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# ============================================
+# Gestion de dépendances (on garde uv.lock)
+# ============================================
+poetry.lock
+Pipfile.lock
+
+# ============================================
+# Tests et couverture
+# ============================================
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+
+# ============================================
+# Logs et fichiers temporaires
+# ============================================
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+
+# ============================================
+# Distribution / packaging
+# ============================================
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ============================================
+# Jupyter Notebooks (si utilisés)
+# ============================================
+.ipynb_checkpoints/
+*.ipynb
+
+# ============================================
+# Secrets et configuration sensible
+# ============================================
+.env
+.env.*
+!.env.example
+secrets.yaml
+config.local.yaml
