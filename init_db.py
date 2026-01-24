@@ -83,9 +83,7 @@ def init_database():
 
         session.add_all(data_to_insert)
         session.commit()
-        print(
-            f"✅ Succès ! {len(data_to_insert)} employés ont été insérés dans PostgreSQL."
-        )
+        print(f"✅ Succès ! {len(data_to_insert)} employés ont été insérés dans PostgreSQL.")
 
     except Exception as e:
         session.rollback()

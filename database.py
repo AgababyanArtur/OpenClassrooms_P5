@@ -31,9 +31,7 @@ else:
 # Création du moteur
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     # Configuration spécifique SQLite
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-    )
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 else:
     # Configuration standard PostgreSQL
     engine = create_engine(SQLALCHEMY_DATABASE_URL)

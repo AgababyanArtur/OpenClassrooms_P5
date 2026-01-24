@@ -208,9 +208,7 @@ def predict(input_data: InputData, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         print(f"❌ Erreur API : {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Erreur lors de la prédiction : {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la prédiction : {str(e)}")
 
 
 if __name__ == "__main__":
