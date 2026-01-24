@@ -1,8 +1,12 @@
-FROM python:3.12-slim
+# ==========================================
+# ÉTAPE 1 : Image de base Python 3.13
+# ==========================================
+FROM docker.io/library/python:3.13-slim
 
+# Définir le répertoire de travail
 WORKDIR /app
 
-# 1. Installation des outils système (git et git-lfs sont requis !)
+# Installer les dépendances système (Git LFS, curl)
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -10,27 +14,40 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && git lfs install
 
-# 2. Récupération de uv (gestionnaire de paquets ultra-rapide)
+# ==========================================
+# ÉTAPE 2 : Installer UV
+# ==========================================
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# 3. Copie du projet
-# Note : Sur Hugging Face Spaces, les fichiers LFS peuvent déjà être présents,
-# mais COPY . . assure que tout le code (y compris main.py et le dossier app/) est bien là.
+# ==========================================
+# ÉTAPE 3 : Copier le projet
+# ==========================================
 COPY . .
 
-# 4. Installation des dépendances
+# ==========================================
+# ÉTAPE 4 : Installer les dépendances Python
+# ==========================================
 RUN uv pip install --system . --no-cache
 
-# 5. Sécurité (Utilisateur non-root)
+# ==========================================
+# ÉTAPE 5 : Créer un utilisateur non-root
+# ==========================================
 RUN useradd -m -u 1000 user
 RUN chown -R user:user /app
 
+# Passer à l'utilisateur non-root
 USER user
-ENV PATH="/home/user/.local/bin:$PATH"
 
-# 6. Port et Lancement
+# ==========================================
+# ÉTAPE 6 : Exposer le port
+# ==========================================
 EXPOSE 7860
 
-# --- MODIFICATION ICI ---
-# On lance 'main:app' car le fichier s'appelle désormais main.py
+# Variables d'environnement
+ENV PYTHONUNBUFFERED=1
+ENV DATABASE_URL=sqlite:///./churn.db
+
+# ==========================================
+# ÉTAPE 7 : Commande de démarrage
+# ==========================================
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
